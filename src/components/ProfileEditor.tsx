@@ -1,0 +1,39 @@
+import { useState } from 'react'
+import type { User } from '../types'
+import { reservedMockHandles } from '../data/seedData'
+import { isValidHandle, normalizeHandle } from '../utils/identity'
+import { ModalSheet } from './ModalSheet'
+
+export function ProfileEditor({ user, onSave, onClose }: { user: User; onSave: (user: User) => void | string | Promise<void | string>; onClose: () => void }) {
+  const [name, setName] = useState(user.name)
+  const [nickname, setNickname] = useState(user.nickname)
+  const [avatar, setAvatar] = useState(user.avatar || user.initials)
+  const [username, setUsername] = useState(user.username.replace(/^@/, ''))
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const save = async () => {
+    const cleanUsername = normalizeHandle(username)
+    if (!name.trim() || !nickname.trim()) { setError('Nombre y apodo son obligatorios.'); return }
+    if (!isValidHandle(cleanUsername)) { setError('El @usuario debe tener 3–24 caracteres: letras, números, punto o guion bajo.'); return }
+    if (reservedMockHandles.includes(cleanUsername) && cleanUsername !== normalizeHandle(user.username)) { setError('Ese @usuario ya está usado en este prototipo.'); return }
+    const fallbackInitials = name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
+    setSaving(true)
+    const saveError = await onSave({ ...user, name: name.trim(), nickname: nickname.trim(), username: cleanUsername, avatar: avatar.trim() || fallbackInitials, initials: fallbackInitials })
+    setSaving(false)
+    if (saveError) { setError(saveError); return }
+    onClose()
+  }
+
+  return <ModalSheet title="Editar perfil" onClose={onClose}>
+    <div className="mb-5 flex items-center gap-4"><div className="grid h-16 w-16 place-items-center rounded-2xl bg-emerald-500 text-xl font-black text-ink">{avatar || 'RA'}</div><p className="text-sm leading-6 text-slate-400">Usá iniciales o un emoji corto como avatar.</p></div>
+    <div className="space-y-4">
+      <label className="block"><span className="text-xs font-bold text-slate-500">Nombre</span><input value={name} onChange={event => setName(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
+      <label className="block"><span className="text-xs font-bold text-slate-500">Apodo</span><input value={nickname} onChange={event => setNickname(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
+      <label className="block"><span className="text-xs font-bold text-slate-500">@usuario</span><div className="relative mt-2"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">@</span><input value={username} maxLength={24} onChange={event => setUsername(event.target.value.toLowerCase().replace(/\s/g, '').replace(/[^a-z0-9._]/g, ''))} className="h-12 w-full rounded-xl border border-slate-200 bg-transparent pl-8 pr-3 outline-none focus:border-emerald-500 dark:border-white/10" /></div></label>
+      <label className="block"><span className="text-xs font-bold text-slate-500">Avatar</span><input value={avatar} maxLength={4} onChange={event => setAvatar(event.target.value)} placeholder="RA o ⚽" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
+    </div>
+    {error && <p className="mt-3 text-sm font-semibold text-rose-500">{error}</p>}
+    <div className="mt-6 grid grid-cols-2 gap-3"><button onClick={onClose} disabled={saving} className="min-h-12 rounded-xl border border-slate-200 font-bold disabled:opacity-50 dark:border-white/10">Cancelar</button><button onClick={save} disabled={saving} className="min-h-12 rounded-xl bg-emerald-500 font-extrabold text-ink disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button></div>
+  </ModalSheet>
+}
