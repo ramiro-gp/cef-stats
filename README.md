@@ -1,12 +1,14 @@
 # CEF Stats
 
-Prototipo funcional mobile-first para cargar estadísticas post partido, comparar rankings y jugar un Mundial Personal. En modo cuenta, Auth, `profiles`, `groups`, `group_members` y `stat_entries` viven en Supabase; los partidos continúan en `localStorage`. El modo local sigue disponible sin configurar Supabase.
+Prototipo funcional mobile-first para cargar estadísticas post partido, comparar rankings y jugar un Mundial Personal. En modo cuenta, Auth, perfiles, grupos, stats y partidos viven en Supabase. El modo local conserva su implementación en `localStorage` por compatibilidad.
+
+La versión publicada se toma de `package.json` y se muestra de forma discreta en el sidebar de escritorio y al pie del contenido en mobile.
 
 Documentación técnica: [`PROJECT_STATUS.md`](./PROJECT_STATUS.md). Deploy: [`DEPLOY.md`](./DEPLOY.md). Plan de migración: [`SUPABASE_PLAN.md`](./SUPABASE_PLAN.md). QA manual de scopes y RLS: [`QA_CHECKLIST.md`](./QA_CHECKLIST.md).
 
 ## Estado de producción / staging
 
-El proyecto está preparado para deploy en Vercel mediante `vercel.json`. En modo cuenta, Supabase almacena Auth, `profiles`, `groups`, `group_members` y `stat_entries`. Permanecen locales los partidos, participantes, invitados, scores y eventos. El modo local conserva todo su dominio en `localStorage`.
+El proyecto está preparado para deploy en Vercel mediante `vercel.json`. En modo cuenta, Supabase almacena Auth, `profiles`, `groups`, `group_members`, `stat_entries`, `matches`, `match_participants` y `match_guests`. El modo local conserva todo su dominio en `localStorage`.
 
 Antes del primer deploy hay que ejecutar el schema/patches, configurar las dos variables `VITE_SUPABASE_*` en Vercel y registrar la URL pública en Supabase Auth. La guía exacta y el smoke test están en `DEPLOY.md`. Después de validar producción con dos usuarios, el próximo paso recomendado es migrar partidos por separado.
 
@@ -26,7 +28,7 @@ pnpm lint
 
 ## Supabase opcional: Auth, profiles y grupos
 
-El modo local funciona sin configurar nada. Para probar cuentas reales:
+Para probar cuentas reales:
 
 1. Crear un proyecto en Supabase.
 2. Para una base nueva, abrir **SQL Editor**, copiar `supabase/schema.sql` y ejecutarlo.
@@ -43,7 +45,7 @@ VITE_SUPABASE_ANON_KEY=TU_ANON_KEY
 
 Si la confirmación de email está activa, el registro muestra que hay que confirmar el correo antes de entrar. El trigger del schema crea el profile desde la metadata del alta. Nunca guardar la service-role key en variables `VITE_*`.
 
-Para probar logout: Perfil → **Cerrar sesión**. Para mantener el prototipo sin cuenta: elegir **Seguir en modo local**.
+Para probar logout: Perfil → **Cerrar sesión**. La entrada visible prioriza siempre una cuenta real.
 
 ### Patch requerido en bases existentes
 
@@ -63,12 +65,20 @@ supabase/patches/002_add_stat_entries.sql
 
 Este patch idempotente crea `stat_entries`, índices, constraints, trigger de `updated_at` y policies RLS para stats personales y grupales.
 
+Para habilitar partidos online, ejecutar también:
+
+```text
+supabase/patches/003_add_matches.sql
+```
+
+El patch 003 crea partidos, participantes e invitados, agrega `stat_entries.match_id` y configura RLS/RPCs para crear, buscar y unirse mediante código.
+
 ## Mi historial
 
 Toda cuenta autenticada tiene un scope virtual `personal:{userId}` llamado **Mi historial**. No crea una fila en `groups` y no requiere membresía. Es el scope inicial cuando no hay una selección remota válida.
 
 - Permite usar Home, carga rápida, Perfil, rankings personales y Mundial Personal sin crear grupo.
-- En modo cuenta sus stats se guardan en Supabase; los partidos siguen en `localStorage`.
+- En modo cuenta sus stats se guardan en Supabase. Los partidos online pertenecen a grupos reales.
 - El selector siempre muestra Mi historial primero y luego los grupos compartidos.
 - Los grupos son opcionales y sirven para comparar números y organizar partidos con amigos.
 
@@ -100,7 +110,7 @@ Toda cuenta autenticada tiene un scope virtual `personal:{userId}` llamado **Mi 
 - El selector del header persiste localmente el UUID del último grupo Supabase elegido.
 - **Editar** actualiza el nombre remoto cuando RLS lo permite.
 - En modo local, crear, editar, unirse y cambiar grupo conservan el flujo mock de `localStorage`.
-- El botón de copiar guarda un link mock como `https://cefstats.local/join/CODIGO`.
+- El botón de copiar genera un link real del origen actual con `?joinGroup=CODIGO`. Si el visitante no inició sesión, la intención se conserva hasta completar login/registro.
 - Cada carga conserva su scope. En modo cuenta, las nuevas stats se guardan en Supabase como `personal` sin `group_id` o como `group` con el UUID activo.
 
 ### Probar grupos reales
@@ -112,11 +122,13 @@ Toda cuenta autenticada tiene un scope virtual `personal:{userId}` llamado **Mi 
 5. Cerrar sesión, entrar con el usuario B y unirse con el código.
 6. Verificar la segunda membresía y ambos profiles en la pantalla de miembros.
 7. Cambiar entre Mi historial y el grupo desde el header.
-8. Cerrar sesión y elegir **Seguir en modo local** para comprobar que los grupos locales siguen separados.
+8. Cerrar sesión y volver a entrar para comprobar que grupos y stats remotas persisten.
 
 Las stats que ya existían en `cef-stats-local-v1` no se importan automáticamente a una cuenta. Permanecen disponibles en modo local. Una futura etapa puede agregar **Importar mis stats locales** con preview y confirmación.
 
-## Partidos locales
+## Partidos online y modo local
+
+Con una cuenta, los partidos se sincronizan mediante Supabase. Los miembros del grupo anfitrión los ven en su listado y cualquier usuario autenticado con el código/link puede encontrarlos y unirse. El modo local interno conserva el flujo anterior en `localStorage`.
 
 1. Abrir **Partidos** desde el bottom nav o usar **+ Partido** en Home.
 2. Crear un partido con nombre, fecha y formato opcional. Se genera un código y link de invitación mock.
@@ -136,7 +148,7 @@ Las stats que ya existían en `cef-stats-local-v1` no se importan automáticamen
 - **Vincular una carga existente:** Perfil → carga sin partido → Vincular. Buscar el código, elegir equipo y confirmar si el resultado oficial cambia Gané/Empaté/Perdí.
 - **Crear una carga vinculada:** Cargar → Vincular a partido con código. La asociación es opcional y se impide una segunda carga del mismo usuario/partido.
 - **Cancha 2.5D:** en el detalle del partido, tocar cualquier avatar para ver equipo, stats, MVP y condición de invitado.
-- Los partidos previos se migran automáticamente: sus participantes pasan a `registered_user` y conservan equipos, stats y MVP.
+- Los partidos locales previos no se importan automáticamente a Supabase.
 
 ## Probar los últimos ajustes
 
@@ -173,10 +185,12 @@ En cualquier eliminatoria, ganar hace avanzar, empatar conserva exactamente la m
 - `src/data/appRepository.ts`: contrato de persistencia actual y punto de reemplazo futuro por Supabase.
 - `src/data/localStorageAdapter.ts`: único acceso directo a `localStorage`.
 - `src/data/authRepository.ts`: operaciones de sesión y profile de Supabase.
-- `src/data/supabaseRepository.ts`: grupos, miembros y preferencia local del grupo remoto activo.
+- `src/data/supabaseRepository.ts`: grupos, miembros, stats y preferencia local del grupo remoto activo.
+- `src/data/supabaseMatchRepository.ts`: partidos, participantes, invitados, score y MVP remotos.
 - `src/lib/supabaseClient.ts`: cliente opcional y detección segura de variables faltantes.
 - `src/hooks/useAuth.ts`: sesión, profile y actualización reactiva de Auth.
 - `src/hooks/useSupabaseGroups.ts`: carga, selección y mutaciones de grupos reales.
+- `src/hooks/useSupabaseMatches.ts`: partidos remotos por grupo y lookup por invitación.
 - `src/utils/scopes.ts`: creación y detección del scope virtual Mi historial.
 - `src/data/messages.ts`: mensajes picantes de baja frecuencia centralizados.
 - `src/store`: estado React y mutaciones de dominio.
@@ -188,7 +202,7 @@ En cualquier eliminatoria, ganar hace avanzar, empatar conserva exactamente la m
 - `src/components/StatEntryEditor.tsx`: edición y borrado confirmado de cargas.
 - `src/components/SettingsSheet.tsx`: tema, mensajes funny, versión y reset local.
 - `src/pages/MatchesPage.tsx`: lista, detalle, equipos, score, resumen y MVP manual.
-- `src/components/MatchCreateSheet.tsx`: creación local de partidos.
+- `src/components/MatchCreateSheet.tsx`: creación híbrida de partidos.
 - `src/components/MatchStatsSheet.tsx`: carga o edición única de stats vinculadas.
 - `src/utils/matches.ts`: cálculo puro del resultado según equipo y totales cargados.
 - `src/components/MatchPitch.tsx`: cancha 2.5D responsive sin librerías externas.
@@ -203,4 +217,4 @@ En cualquier eliminatoria, ganar hace avanzar, empatar conserva exactamente la m
 
 La clave principal del modo local es `cef-stats-local-v1`; el tema usa `cef-theme`. La UI no accede directamente a ninguna de esas claves.
 
-En modo cuenta, Auth, profiles, grupos, miembros y stats usan Supabase. Permanecen en `localStorage`: partidos, participantes, invitados, eventos y el ID del scope activo. Feed, banner, rankings y Mundial Personal se calculan en frontend desde las stats del scope. En modo local, todo el dominio deportivo continúa local.
+En modo cuenta, Auth, profiles, grupos, miembros, stats, partidos, participantes, invitados, score y MVP usan Supabase. El scope activo y algunas preferencias siguen locales; feed, banner, rankings y Mundial Personal se calculan en frontend. En modo local, todo el dominio deportivo continúa en `localStorage`. Los partidos locales previos no se importan automáticamente.

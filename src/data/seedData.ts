@@ -3,7 +3,7 @@ import type { ActivityFeedItem, Group, RankingPlayer, User } from '../types'
 export const defaultUser: User = {
   id: 'user-ramiro',
   name: 'Ramiro',
-  nickname: 'Rami',
+  nickname: '',
   username: 'rami10',
   initials: 'RA',
   avatar: 'RA',

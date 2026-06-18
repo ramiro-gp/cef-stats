@@ -14,7 +14,7 @@ export function ProfileEditor({ user, onSave, onClose }: { user: User; onSave: (
 
   const save = async () => {
     const cleanUsername = normalizeHandle(username)
-    if (!name.trim() || !nickname.trim()) { setError('Nombre y apodo son obligatorios.'); return }
+    if (!name.trim()) { setError('El nombre es obligatorio.'); return }
     if (!isValidHandle(cleanUsername)) { setError('El @usuario debe tener 3–24 caracteres: letras, números, punto o guion bajo.'); return }
     if (reservedMockHandles.includes(cleanUsername) && cleanUsername !== normalizeHandle(user.username)) { setError('Ese @usuario ya está usado en este prototipo.'); return }
     const fallbackInitials = name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
@@ -26,10 +26,10 @@ export function ProfileEditor({ user, onSave, onClose }: { user: User; onSave: (
   }
 
   return <ModalSheet title="Editar perfil" onClose={onClose}>
-    <div className="mb-5 flex items-center gap-4"><div className="grid h-16 w-16 place-items-center rounded-2xl bg-emerald-500 text-xl font-black text-ink">{avatar || 'RA'}</div><p className="text-sm leading-6 text-slate-400">Usá iniciales o un emoji corto como avatar.</p></div>
+    <div className="mb-5 flex items-center gap-4"><div className="grid h-16 w-16 place-items-center rounded-2xl bg-emerald-500 text-xl font-black text-ink">{avatar || name.trim().slice(0, 2).toUpperCase()}</div><p className="text-sm leading-6 text-slate-400">Usá iniciales o un emoji corto como avatar.</p></div>
     <div className="space-y-4">
       <label className="block"><span className="text-xs font-bold text-slate-500">Nombre</span><input value={name} onChange={event => setName(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
-      <label className="block"><span className="text-xs font-bold text-slate-500">Apodo</span><input value={nickname} onChange={event => setNickname(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
+      <label className="block"><span className="text-xs font-bold text-slate-500">Apodo opcional</span><input value={nickname} onChange={event => setNickname(event.target.value)} placeholder="Podés configurarlo después" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
       <label className="block"><span className="text-xs font-bold text-slate-500">@usuario</span><div className="relative mt-2"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">@</span><input value={username} maxLength={24} onChange={event => setUsername(event.target.value.toLowerCase().replace(/\s/g, '').replace(/[^a-z0-9._]/g, ''))} className="h-12 w-full rounded-xl border border-slate-200 bg-transparent pl-8 pr-3 outline-none focus:border-emerald-500 dark:border-white/10" /></div></label>
       <label className="block"><span className="text-xs font-bold text-slate-500">Avatar</span><input value={avatar} maxLength={4} onChange={event => setAvatar(event.target.value)} placeholder="RA o ⚽" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
     </div>

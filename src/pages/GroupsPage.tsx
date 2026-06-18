@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { CheckIcon, CopyIcon, PlusCircleIcon, UsersIcon } from '../components/icons'
 import { PageTitle } from '../components/PageTitle'
 import type { Group, GroupMemberView } from '../types'
+import { createGroupInviteLink } from '../utils/groups'
 
 interface Props {
   groups: Group[]
@@ -31,7 +32,7 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
 
   const open = (nextMode: typeof mode, group?: Group) => { setMode(nextMode); setEditing(group ?? null); setValue(group?.name ?? ''); setError('') }
   const copy = (group: Group) => {
-    void navigator.clipboard?.writeText(`https://cefstats.local/join/${group.code}`)
+    void navigator.clipboard?.writeText(createGroupInviteLink(group.code, window.location.origin))
     setCopied(group.id)
     window.setTimeout(() => setCopied(null), 1500)
   }
@@ -85,9 +86,9 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
         </> : <>
           <button onClick={() => open('list')} disabled={submitting} className="mb-4 min-h-10 text-xs font-bold text-emerald-500 disabled:opacity-50">← Volver</button>
           <h3 className="font-extrabold">{mode === 'create' ? 'Nuevo grupo' : mode === 'join' ? 'Unirme a un grupo' : 'Editar grupo'}</h3>
-          <p className="mt-1 text-sm text-slate-400">{mode === 'join' ? 'Ingresá el código de invitación.' : 'Elegí un nombre corto y reconocible.'}</p>
+          <p className="mt-1 text-sm text-slate-400">{mode === 'join' ? 'Pegá el código o link de invitación.' : 'Elegí un nombre corto y reconocible.'}</p>
           <label className="mt-4 block text-xs font-bold text-slate-400">{mode === 'join' ? 'Código' : 'Nombre del grupo'}</label>
-          <input autoFocus value={value} disabled={submitting} onChange={event => setValue(event.target.value)} placeholder={mode === 'join' ? 'CEF-AB12CD34' : 'Fútbol del martes'} className={`mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 disabled:opacity-50 dark:border-white/10 ${mode === 'join' ? 'font-mono uppercase tracking-widest' : ''}`} />
+          <input autoFocus value={value} disabled={submitting} onChange={event => setValue(event.target.value)} placeholder={mode === 'join' ? 'CEF-AB12CD34 o https://...' : 'Fútbol del martes'} className={`mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 disabled:opacity-50 dark:border-white/10 ${mode === 'join' ? 'font-mono tracking-wide' : ''}`} />
           {error && <p className="mt-2 text-xs font-bold text-rose-500">{error}</p>}
           <button onClick={submit} disabled={submitting} className="mt-4 min-h-12 w-full rounded-xl bg-emerald-500 font-bold text-ink disabled:opacity-50">{submitting ? mode === 'create' ? 'Creando grupo...' : mode === 'join' ? 'Uniéndome...' : 'Guardando...' : mode === 'create' ? 'Crear y activar' : mode === 'join' ? 'Unirme y activar' : 'Guardar nombre'}</button>
         </>}

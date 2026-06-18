@@ -1,4 +1,5 @@
 import type { GuestMatchStats, MatchParticipant, StatEntry, User } from '../types'
+import { getParticipantAvatar, getParticipantName } from '../utils/matches'
 
 interface Props {
   participants: MatchParticipant[]
@@ -12,8 +13,8 @@ interface Props {
 
 export function MatchPitch({ participants, user, entries, guestStats, mvpParticipantId, activeParticipantId, onSelect }: Props) {
   const team = (kind: 'light' | 'dark') => participants.filter(participant => participant.team === kind)
-  const avatar = (participant: MatchParticipant) => participant.type === 'guest' ? participant.avatar || 'IN' : participant.userId === user.id ? user.avatar : 'JU'
-  const name = (participant: MatchParticipant) => participant.type === 'guest' ? participant.guestName : participant.userId === user.id ? user.name : 'Jugador'
+  const avatar = (participant: MatchParticipant) => getParticipantAvatar(participant, user)
+  const name = (participant: MatchParticipant) => getParticipantName(participant, user)
   const stats = (participant: MatchParticipant) => participant.type === 'guest' ? guestStats.find(item => item.participantId === participant.id) : entries.find(entry => entry.userId === participant.userId)
 
   const renderTeam = (kind: 'light' | 'dark') => {

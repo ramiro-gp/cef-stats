@@ -10,6 +10,7 @@ export function useSupabaseGroups(userId: string | null) {
   const [loading, setLoading] = useState(Boolean(userId))
   const [membersLoading, setMembersLoading] = useState(false)
   const [error, setError] = useState('')
+  const [loadedUserId, setLoadedUserId] = useState<string | null>(null)
   const personalScope = useMemo(() => userId ? createPersonalScope(userId) : null, [userId])
   const scopes = useMemo(() => personalScope ? [personalScope, ...groups] : groups, [groups, personalScope])
   const activeScope = useMemo(() => scopes.find(group => group.id === activeGroupId) ?? personalScope ?? groups[0] ?? null, [activeGroupId, groups, personalScope, scopes])
@@ -23,6 +24,7 @@ export function useSupabaseGroups(userId: string | null) {
   const loadGroups = useCallback(async () => {
     if (!userId) {
       setGroups([])
+      setLoadedUserId(null)
       setLoading(false)
       return []
     }
@@ -43,6 +45,7 @@ export function useSupabaseGroups(userId: string | null) {
       setError(message)
       return []
     } finally {
+      setLoadedUserId(userId)
       setLoading(false)
     }
   }, [userId])
@@ -88,5 +91,5 @@ export function useSupabaseGroups(userId: string | null) {
     setGroups(current => current.map(group => group.id === id ? updated : group))
   }, [])
 
-  return { groups, scopes, personalScope, activeScope, activeSharedGroup, members: activeSharedGroup ? members : [], loading, membersLoading: activeSharedGroup ? membersLoading : false, error, selectGroup, createGroup, joinGroup, updateGroup, reload: loadGroups }
+  return { groups, scopes, personalScope, activeScope, activeSharedGroup, members: activeSharedGroup ? members : [], loading, ready: !userId || loadedUserId === userId, membersLoading: activeSharedGroup ? membersLoading : false, error, selectGroup, createGroup, joinGroup, updateGroup, reload: loadGroups }
 }

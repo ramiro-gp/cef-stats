@@ -88,18 +88,19 @@ Repetir los intentos equivalentes con A contra datos privados de B.
 - [ ] Mundial Personal cambia de progreso al cambiar scope y usa únicamente las stats propias de ese scope.
 - [ ] Stats de B nunca alteran el Mundial Personal de A, ni viceversa.
 
-## Cargas vinculadas a partidos locales
+## Partidos online y cargas vinculadas
 
-- [ ] Crear un partido local en el scope activo y cargar stats desde su detalle.
+- [ ] A crea un partido en el grupo compartido y B lo ve desde otro dispositivo/sesiÃ³n.
+- [ ] B abre el link/código, se une a un equipo y carga stats.
+- [ ] A agrega un invitado, carga sus stats, score y MVP.
 - [ ] En Perfil, el nombre del partido aparece como enlace con flecha.
 - [ ] Hacer clic abre directamente el detalle de ese partido.
 - [ ] Volver a Perfil y confirmar que editar/borrar la stat sigue funcionando.
-- [ ] Si la stat tiene `local_match_id` pero el partido no existe en ese dispositivo, se muestra `Partido vinculado no disponible en este dispositivo` y no un enlace roto.
-- [ ] Confirmar que no se creó ninguna tabla remota de matches ni FK hacia partidos.
+- [ ] Confirmar `stat_entries.match_id` y que `local_match_id` queda nulo en vínculos nuevos.
 
 ## Modo local
 
-- [ ] Cerrar sesión y entrar con **Seguir en modo local**.
+- [ ] Confirmar por regresión técnica que el store local sigue compilando y conservando aislamiento; el gateway de producción ya no expone esta entrada.
 - [ ] Crear, editar y borrar stats locales.
 - [ ] Recargar y confirmar persistencia en `cef-stats-local-v1`.
 - [ ] Cambiar entre grupos locales y confirmar aislamiento por `groupId`.
@@ -112,7 +113,7 @@ Repetir los intentos equivalentes con A contra datos privados de B.
 - [ ] `pnpm build`
 - [ ] `pnpm lint`
 - [ ] No hay errores en consola durante cambio de scope y CRUD.
-- [ ] No se migraron partidos, participantes, invitados ni eventos.
+- [ ] El modo local continúa compilando y no mezcla datos con partidos remotos.
 
 ## Smoke test en Vercel
 
@@ -126,5 +127,5 @@ Repetir los intentos equivalentes con A contra datos privados de B.
 - [ ] Las stats de Mi historial no aparecen en el grupo compartido ni al revés.
 - [ ] Un grupo privado de A no aparece ni acepta escrituras de B.
 - [ ] El modo local crea y conserva stats solo en el navegador.
-- [ ] Ninguna operación de partido crea tablas o filas remotas de matches.
+- [ ] Partidos, participantes, invitados, score, MVP y stats vinculadas persisten tras logout/login.
 - [ ] Supabase Auth tiene Site URL y Redirect URLs apuntando al dominio desplegado.

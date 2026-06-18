@@ -1,6 +1,6 @@
 # Plan de migración a Supabase
 
-Este documento describe el modelo objetivo. Auth, profiles, grupos, membresías y stats ya usan Supabase en modo cuenta. Partidos, participantes, invitados y eventos siguen funcionando con `localStorage`.
+Este documento describe el modelo objetivo. Auth, profiles, grupos, membresías, stats, partidos, participantes e invitados ya usan Supabase en modo cuenta. El modo local conserva `localStorage`.
 
 ## Estado de implementación
 
@@ -8,9 +8,10 @@ Este documento describe el modelo objetivo. Auth, profiles, grupos, membresías 
 - Implementado: `groups` y `group_members` reales en modo cuenta, miembros con profiles, creación transaccional, edición, unión por código y selector persistido.
 - Implementado: scope personal virtual `personal:{userId}`; los grupos compartidos son opcionales.
 - Implementado: `stat_entries` remotas por scope, CRUD, RLS por propietario/membresía y cálculos frontend de Perfil, rankings y Mundial Personal.
+- Implementado: `matches`, `match_participants` y `match_guests`, score/MVP, lookup y unión por código mediante el patch 003.
 - Modo local: conserva sus grupos y membresías mock sin depender de Supabase.
-- Todavía local en ambos modos: partidos, participantes, invitados y eventos.
-- Siguiente paso: probar RLS de stats con dos usuarios y preparar un importador local explícito sin tocar partidos.
+- Todavía local: datos históricos del modo local y eventos derivados de feed/banner.
+- Siguiente paso: probar RLS/RPCs de partidos con dos usuarios y preparar un importador local explícito.
 
 ### Compatibilidad SQL
 
@@ -58,7 +59,7 @@ Cada usuario puede leer perfiles necesarios para sus grupos. Solo el dueño pued
 ### `group_members`
 
 - `id uuid primary key`
-- `group_id uuid references groups(id) on delete cascade`
+- `host_group_id uuid references groups(id) on delete cascade`
 - `user_id uuid references profiles(id) on delete cascade`
 - `role text check (role in ('owner','admin','member'))`
 - `joined_at timestamptz`
@@ -72,7 +73,8 @@ Esta tabla define acceso. Un usuario solo debería consultar datos de grupos a l
 - `scope_type text check (scope_type in ('personal','group'))`
 - `group_id uuid null references groups(id)`
 - `user_id uuid references profiles(id)`
-- `local_match_id text null` (referencia transitoria, sin FK, mientras partidos sean locales)
+- `match_id uuid null references matches(id)` para partidos remotos.
+- `local_match_id text null` se conserva para compatibilidad con vínculos previos.
 - `team text null check (team in ('light','dark'))`
 - `result text check (result in ('win','draw','loss'))`
 - `goals integer not null check (goals >= 0)`
@@ -82,7 +84,7 @@ Esta tabla define acceso. Un usuario solo debería consultar datos de grupos a l
 
 Personal exige `group_id null`; grupo exige `group_id` presente. RLS permite leer stats grupales solo a miembros y mutar únicamente las propias.
 
-### `matches`
+### `matches` (implementada con patch 003)
 
 - `id uuid primary key`
 - `group_id uuid references groups(id) on delete cascade`
@@ -92,36 +94,39 @@ Personal exige `group_id null`; grupo exige `group_id` presente. RLS permite lee
 - `scheduled_at timestamptz`
 - `invite_code text unique not null`
 - `status text check (status in ('open','played','closed'))`
-- `score_light integer null check (score_light >= 0)`
-- `score_dark integer null check (score_dark >= 0)`
-- `mvp_participant_id uuid null`
+- `light_score integer not null check (light_score >= 0)`
+- `dark_score integer not null check (dark_score >= 0)`
+- `mvp_user_id uuid null`
+- `mvp_guest_id uuid null`
 - `created_at timestamptz`
 - `updated_at timestamptz`
 
-El MVP referencia a `match_participants`; esa foreign key puede agregarse después de crear ambas tablas.
+Solo el creador modifica datos principales, score y MVP. El lookup por código y la unión usan RPCs acotadas.
 
 ### `match_participants`
 
 - `id uuid primary key`
 - `match_id uuid references matches(id) on delete cascade`
-- `user_id uuid null references profiles(id)`
-- `participant_type text check (participant_type in ('registered_user','guest'))`
-- `guest_name text null`
-- `guest_handle text null`
-- `guest_avatar text null`
+- `user_id uuid not null references profiles(id)`
 - `team text check (team in ('light','dark'))`
 - `created_at timestamptz`
+- `unique(match_id, user_id)`
 
-Para registrados: `user_id` obligatorio y único por partido. Para invitados: `guest_name` obligatorio y `user_id` nulo. Estas reglas pueden expresarse con checks.
+Cada usuario administra únicamente su propia participación. La RPC de invitación permite el alta inicial sin abrir inserts arbitrarios.
 
-### `match_guest_stats`
+### `match_guests` (implementada con patch 003)
 
-- `participant_id uuid primary key references match_participants(id) on delete cascade`
+- `id uuid primary key`
+- `match_id uuid references matches(id) on delete cascade`
+- `name text not null`
+- `avatar text null`
+- `team text check (team in ('light','dark'))`
 - `goals integer not null default 0 check (goals >= 0)`
 - `assists integer not null default 0 check (assists >= 0)`
+- `created_at timestamptz`
 - `updated_at timestamptz`
 
-Separarla evita mezclar stats de invitados con `stat_entries`, que alimentan rankings, perfil y Mundial Personal.
+Los invitados y sus stats están separados de `stat_entries`, por lo que nunca alimentan rankings, perfil o Mundial Personal.
 
 ### `activity_feed`
 

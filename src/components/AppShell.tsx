@@ -4,6 +4,7 @@ import { BottomNav } from './BottomNav'
 import { GroupSelector } from './GroupSelector'
 import { CalendarIcon, HomeIcon, MoonIcon, PlusCircleIcon, SunIcon, TrophyIcon, UserIcon, UsersIcon } from './icons'
 import { isPersonalScope } from '../utils/scopes'
+import { appVersion } from '../config/appVersion'
 
 const desktopItems = [
   { page: 'home' as const, label: 'Inicio', icon: HomeIcon },
@@ -40,6 +41,7 @@ export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGro
         <div className="mt-1 font-bold">{group?.name ?? 'Sin grupo activo'}</div>
         {group && <div className="mt-1 text-xs text-slate-400">{personalScope ? 'Stats personales · Local' : `${group.memberCount} jugadores · ${group.gamesCount} partidos`}</div>}
       </div>
+      <p className="mt-3 text-center text-[10px] font-medium tracking-wide text-slate-400 dark:text-slate-500">{appVersion}</p>
     </aside>
 
     <div className="lg:pl-64">
@@ -53,7 +55,7 @@ export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGro
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">{children}<p className="mt-10 text-center text-[10px] font-medium tracking-wide text-slate-400 dark:text-slate-500 lg:hidden">{appVersion}</p></main>
     </div>
     <BottomNav page={page} onNavigate={onNavigate} />
   </div>

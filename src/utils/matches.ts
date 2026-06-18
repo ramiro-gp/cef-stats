@@ -1,6 +1,31 @@
-import type { Match, MatchFormat, MatchResult, MatchScore, MatchTeam, StatEntry } from '../types'
+import type { Match, MatchFormat, MatchParticipant, MatchResult, MatchScore, MatchTeam, StatEntry, User } from '../types'
 
 const BASE_TEAM_SIZE: Record<MatchFormat, number> = { F5: 5, F6: 6, F7: 7, F8: 8, F11: 11 }
+
+function identityInitials(name?: string, handle?: string): string {
+  const words = name?.trim().split(/\s+/).filter(Boolean) ?? []
+  if (words.length) return words.slice(0, 2).map(word => word[0]).join('').toUpperCase()
+  const cleanHandle = handle?.trim().replace(/^@/, '')
+  return cleanHandle?.[0]?.toUpperCase() ?? 'J'
+}
+
+export function getParticipantName(participant: MatchParticipant, user: User): string {
+  if (participant.type === 'guest') return participant.guestName?.trim() || 'Invitado'
+  if (participant.userId === user.id) return user.name.trim() || user.username.replace(/^@/, '') || 'Jugador'
+  return participant.displayName?.trim() || participant.handle?.replace(/^@/, '') || 'Jugador'
+}
+
+export function getParticipantHandle(participant: MatchParticipant, user: User): string | undefined {
+  if (participant.type === 'guest') return participant.guestHandle?.trim().replace(/^@/, '') || undefined
+  const handle = participant.userId === user.id ? user.username : participant.handle
+  return handle?.trim().replace(/^@/, '') || undefined
+}
+
+export function getParticipantAvatar(participant: MatchParticipant, user: User): string {
+  if (participant.type === 'guest') return participant.avatar?.trim() || 'IN'
+  const avatar = participant.userId === user.id ? user.avatar : participant.avatar
+  return avatar?.trim() || identityInitials(getParticipantName(participant, user), getParticipantHandle(participant, user))
+}
 
 export function getMaxTeamSize(format: MatchFormat = 'F5'): number {
   return BASE_TEAM_SIZE[format] + 2
@@ -16,7 +41,7 @@ export function extractInviteCode(value: string): string {
   if (!trimmed) return ''
   try {
     const url = new URL(trimmed)
-    const queryCode = url.searchParams.get('code')
+    const queryCode = url.searchParams.get('match') ?? url.searchParams.get('code')
     if (queryCode) return queryCode.toUpperCase()
     return url.pathname.split('/').filter(Boolean).at(-1)?.toUpperCase() ?? ''
   } catch {

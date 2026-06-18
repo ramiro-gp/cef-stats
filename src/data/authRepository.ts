@@ -22,7 +22,6 @@ export interface SignUpValues {
   password: string
   name: string
   handle: string
-  avatar?: string
 }
 
 function toProfile(row: ProfileRow): AuthProfile {
@@ -98,7 +97,7 @@ export const authRepository = {
     const response = await client.auth.signUp({
       email: values.email.trim(),
       password: values.password,
-      options: { data: { name: values.name.trim(), handle, avatar: values.avatar?.trim() || null } },
+      options: { data: { name: values.name.trim(), handle } },
     })
     if (response.error) return { error: authErrorMessage(response.error.message) }
     if (!response.data.session) return { message: 'Cuenta creada. Revisá tu email para confirmar el registro y después iniciá sesión.' }

@@ -2,7 +2,7 @@
 
 ## Qué funciona hoy
 
-CEF Stats es un prototipo React + Vite + TypeScript + Tailwind, mobile first, con dark mode predeterminado. En modo cuenta usa Supabase Auth, `profiles`, `groups`, `group_members` y `stat_entries`; partidos y sus entidades relacionadas continúan en `localStorage`.
+CEF Stats es un prototipo React + Vite + TypeScript + Tailwind, mobile first, con dark mode predeterminado. En modo cuenta usa Supabase Auth, perfiles, grupos, stats, partidos, participantes e invitados. El modo local conserva su store de `localStorage`.
 
 Incluye perfil y handle editables, grupos locales, grupo activo, carga rápida, rankings, feed, banner, Mundial Personal, partidos, equipos, cupos, invitados, vinculación por código/link, score, MVP, stats de invitados y cancha visual.
 
@@ -14,9 +14,10 @@ Las cuentas autenticadas siempre disponen de **Mi historial**, un scope virtual 
 - Deploy objetivo: Vercel, con configuración explícita en `vercel.json` y pasos en `DEPLOY.md`.
 - Variables requeridas: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 - La navegación actual vive en estado React sobre `/`; no hay rutas client-side que requieran rewrites.
-- Supabase remoto: Auth, profiles, grupos, membresías y stats.
-- `localStorage`: partidos, participantes, invitados, score, eventos, preferencias y todo el dominio del modo local.
-- Próximo paso después de estabilizar producción: diseñar y migrar partidos con schema/RLS propios, sin mezclarlo con este deploy.
+- Supabase remoto: Auth, profiles, grupos, membresías, stats, partidos, participantes, invitados, score y MVP.
+- `localStorage`: preferencias, compatibilidad histórica y todo el dominio del modo local interno.
+- Los links de grupos y partidos usan el dominio actual y conservan la intención durante login.
+- La UI muestra la versión de `package.json` en desktop y mobile para identificar cada deploy.
 
 ## Arquitectura actual
 
@@ -41,6 +42,7 @@ Supabase Auth/API                ↓
 - `src/hooks/useAuth.ts`: sincronización de sesión/profile.
 - `src/hooks/useSupabaseGroups.ts`: estado remoto, miembros y grupo activo persistido localmente.
 - `src/hooks/useSupabaseStats.ts`: lectura y mutaciones remotas de stats según el scope activo.
+- `src/data/supabaseMatchRepository.ts` y `src/hooks/useSupabaseMatches.ts`: frontera remota y estado de partidos por grupo.
 - `src/utils/scopes.ts`: scope `personal:{userId}` y detección de contexto personal.
 - `src/lib/supabaseClient.ts`: cliente nullable; sin env vars no rompe el arranque.
 - `src/utils/ids.ts`: IDs y códigos de invitación.
@@ -58,9 +60,9 @@ Supabase Auth/API                ↓
 - Los rankings mock y contadores históricos no representan miembros reales completos.
 - `GroupMember` ya existe y se migra para el usuario local, pero los miembros mock restantes no se inventan.
 - El Mundial Personal continúa calculándose en frontend y no fue modificado.
-- El usuario autenticado aporta nombre, handle y avatar; nickname y posición siguen locales. Sus stats usan Supabase y los partidos continúan locales.
+- El usuario autenticado aporta nombre, handle y avatar; nickname y posición siguen locales.
 - Las tablas remotas de grupos están conectadas a la UI solo en modo cuenta.
-- Las stats autenticadas se leen y escriben en Supabase; partidos, invitados y eventos siguen locales.
+- Stats y partidos autenticados se leen y escriben en Supabase; feed/banner siguen como proyecciones frontend.
 - Mi historial usa su propio ID local y es el fallback personal-first cuando no hay grupos.
 - Algunos componentes legacy de detalle de participante/invitado permanecen en el repo aunque el flujo actual usa popover. Pueden retirarse en una limpieza posterior con QA visual.
 
@@ -86,13 +88,13 @@ pnpm lint
 - Si faltan `groupMembers`, se crean membresías locales iniciales sin descartar el resto del estado.
 - Resetear datos elimina el estado principal y conserva el comportamiento anterior.
 - Iniciar o cerrar sesión no elimina estadísticas ni partidos locales.
-- Sin variables Supabase, la pantalla de acceso explica la configuración y mantiene disponible el modo local.
+- Sin variables Supabase, la pantalla de acceso explica la configuración. El modo local permanece en la arquitectura, pero ya no se ofrece como acción visible del gateway.
 - Preferencia de grupo remoto activo: `cef-stats-active-supabase-group`.
 - Las stats locales anteriores no se importan automáticamente a una cuenta.
-- La pantalla inicial volvió a mostrar login y modo local; se corrigió el fallback booleano que dejaba solamente el logo.
+- La pantalla inicial prioriza login/registro de cuenta real y ya no muestra el acceso al modo local.
 
 ## Próximo paso recomendado
 
-Ejecutar y validar `supabase/patches/002_add_stat_entries.sql` con dos usuarios reales. El próximo paso recomendado es un importador explícito de stats locales; partidos y eventos deben permanecer locales hasta tener una migración separada e idempotente.
+Ejecutar `supabase/patches/003_add_matches.sql` y validar con dos usuarios reales. Después conviene automatizar pruebas de RLS/RPCs y diseñar una importación explícita de datos locales históricos.
 
 Para corregir instalaciones existentes con el error de `gen_random_bytes`, ejecutar `supabase/patches/001_fix_invite_code_generation.sql` desde SQL Editor.

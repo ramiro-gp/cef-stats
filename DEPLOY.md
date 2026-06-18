@@ -1,6 +1,6 @@
 # Deploy de CEF Stats en Vercel
 
-Esta guía cubre el deploy actual: frontend React/Vite en Vercel; Auth, profiles, grupos, membresías y stats en Supabase; partidos y datos asociados en `localStorage`.
+Esta guía cubre el deploy actual: frontend React/Vite en Vercel; Auth, profiles, grupos, membresías, stats y partidos en Supabase.
 
 ## 1. Verificaciones locales
 
@@ -27,19 +27,21 @@ En un proyecto nuevo, ejecutar desde **SQL Editor**, en este orden:
 
 1. `supabase/schema.sql`
 2. `supabase/patches/002_add_stat_entries.sql`
+3. `supabase/patches/003_add_matches.sql`
 
 En una base existente, ejecutar los patches idempotentes:
 
 1. `supabase/patches/001_fix_invite_code_generation.sql`
 2. `supabase/patches/002_add_stat_entries.sql`
+3. `supabase/patches/003_add_matches.sql`
 
-El patch 001 actualiza la RPC de creación de grupos. El patch 002 crea `stat_entries`, constraints, índices, trigger y policies RLS.
+El patch 001 actualiza la RPC de creación de grupos. El patch 002 crea stats y el patch 003 crea partidos online y su vínculo con stats.
 
 Confirmar en Supabase:
 
 - Email/password habilitado en **Authentication → Providers**.
-- Existen `profiles`, `groups`, `group_members` y `stat_entries`.
-- RLS está habilitado en las cuatro tablas.
+- Existen `profiles`, `groups`, `group_members`, `stat_entries`, `matches`, `match_participants` y `match_guests`.
+- RLS está habilitado en todas las tablas públicas anteriores.
 - Existen las RPC `create_group_with_membership`, `join_group_by_invite` e `is_handle_available`.
 
 ## 3. Configurar URLs de Auth
@@ -131,18 +133,18 @@ Referencias oficiales: [Vite on Vercel](https://vercel.com/docs/frameworks/front
 7. Editar y borrar una stat propia.
 8. Confirmar mediante la checklist RLS que ningún usuario puede modificar stats ajenas ni escribir en grupos donde no es miembro.
 
-### Persistencia y modo local
+### Persistencia
 
 1. Cerrar sesión y volver a entrar: grupos y stats remotas deben seguir disponibles.
-2. Elegir **Seguir en modo local**, crear una stat y recargar.
-3. Confirmar persistencia en ese navegador y ausencia de una nueva fila remota.
+2. Confirmar que los partidos creados siguen disponibles al recargar el mismo navegador.
+3. Confirmar que esos partidos no crean tablas ni filas remotas de matches.
 
 ## 7. Limitaciones actuales
 
-- Partidos, participantes, invitados, scores, eventos y referencias visuales de partidos siguen en `localStorage`.
-- Cambiar de navegador o dispositivo no sincroniza partidos.
-- Las stats vinculadas conservan `local_match_id`, pero el detalle solo puede abrirse donde exista ese partido local.
+- Los partidos creados con cuenta se sincronizan entre dispositivos.
+- Los partidos históricos del modo local no se importan automáticamente.
+- `local_match_id` se conserva únicamente para compatibilidad con vínculos previos.
 - Feed y banner se calculan en frontend.
 - No existe importación automática de stats locales hacia una cuenta.
 
-Después de estabilizar el deploy, el próximo paso recomendado es migrar partidos en una etapa separada, con schema, RLS y migración explícita.
+Después de estabilizar el deploy, el próximo paso recomendado es automatizar pruebas RLS/RPC y diseñar una importación explícita de datos locales históricos.

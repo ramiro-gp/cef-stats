@@ -24,7 +24,7 @@ interface Props {
   onSaveUser: (user: User) => void | string | Promise<void | string>
   onUpdateEntry: (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'>) => void | Promise<void>
   onDeleteEntry: (id: string) => void | Promise<void>
-  onLinkEntry: (entryId: string, matchId: string, team: MatchTeam, result?: MatchResult) => boolean
+  onLinkEntry: (entryId: string, matchId: string, team: MatchTeam, result?: MatchResult) => boolean | Promise<boolean>
   onTheme: (theme: ThemeMode) => void
   onReset: () => void
   onLogout: () => void
@@ -40,9 +40,10 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
   const [linkEntry, setLinkEntry] = useState<StatEntry | null>(null)
   const history = [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 12)
   const progress = worldCupProgress(worldCup)
+  const profileTitle = user.nickname && user.nickname !== user.name ? `${user.name} “${user.nickname}”` : user.name
 
   return <>
-    <div className="mb-6 flex items-start justify-between gap-3"><PageTitle eyebrow="Mi perfil" title={`${user.name} “${user.nickname}”`} subtitle={`${user.position} · ${group.name}`} /><button onClick={() => setSettingsOpen(true)} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">Ajustes</button></div>
+    <div className="mb-6 flex items-start justify-between gap-3"><PageTitle eyebrow="Mi perfil" title={profileTitle} subtitle={`${user.position} · ${group.name}`} /><button onClick={() => setSettingsOpen(true)} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">Ajustes</button></div>
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       <div className="space-y-4">
         <section className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-6 text-white">
@@ -66,8 +67,8 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
           {history.length === 0 && <div className="p-8 text-center"><div className="text-2xl">⚽</div><p className="mt-3 font-bold">Todavía no hay stats</p><p className="mt-1 text-sm text-slate-400">Cargá tu primer partido y aparece acá.</p></div>}
           {history.map((entry, index) => { const linkedMatch = entry.matchId ? matches.find(match => match.id === entry.matchId) : undefined; return <div key={entry.id} className={`flex items-center gap-3 p-4 sm:p-5 ${index !== history.length - 1 ? 'border-b border-slate-100 dark:border-white/5' : ''}`}>
             <div className={`grid h-10 w-10 place-items-center rounded-xl ${entry.result === 'win' ? 'bg-emerald-500/10 text-emerald-500' : entry.result === 'draw' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'}`}>{entry.result === 'win' ? <MedalIcon className="h-5 w-5" /> : <span className="font-black">{entry.result === 'draw' ? 'E' : 'D'}</span>}</div>
-            <div className="min-w-0 flex-1"><div className="font-bold">{resultLabels[entry.result]}</div><div className="mt-1 text-xs capitalize text-slate-400">{formatEntryDate(entry.createdAt)}</div>{linkedMatch ? <button onClick={() => onOpenMatch(linkedMatch.id)} className="mt-1 block max-w-full truncate text-left text-[10px] font-bold text-emerald-500 underline-offset-2 hover:underline">{linkedMatch.title} →</button> : entry.matchId ? <div className="mt-1 truncate text-[10px] font-bold text-slate-400">Partido vinculado no disponible en este dispositivo</div> : null}</div>
-            <div className="flex flex-wrap justify-end gap-2 text-center"><div><div className="font-black">{entry.goals}</div><div className="text-[9px] text-slate-400">GOL</div></div><div><div className="font-black">{entry.assists}</div><div className="text-[9px] text-slate-400">ASIS</div></div>{!accountMode && !entry.matchId && <button onClick={() => setLinkEntry(entry)} className="min-h-10 rounded-xl border border-emerald-500/30 px-2 text-[10px] font-bold text-emerald-500">Vincular</button>}<button onClick={() => setSelectedEntry(entry)} className="min-h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-white/10">Editar</button></div>
+            <div className="min-w-0 flex-1"><div className="font-bold">{resultLabels[entry.result]}</div><div className="mt-1 text-xs capitalize text-slate-400">{formatEntryDate(entry.createdAt)}</div>{linkedMatch ? <button onClick={() => onOpenMatch(linkedMatch.id)} className="mt-1 block max-w-full truncate text-left text-[10px] font-bold text-emerald-500 underline-offset-2 hover:underline">{linkedMatch.title} →</button> : entry.matchId ? <div className="mt-1 text-[10px] font-bold leading-4 text-slate-400">Partido vinculado no disponible en este dispositivo.</div> : null}</div>
+            <div className="flex flex-wrap justify-end gap-2 text-center"><div><div className="font-black">{entry.goals}</div><div className="text-[9px] text-slate-400">GOL</div></div><div><div className="font-black">{entry.assists}</div><div className="text-[9px] text-slate-400">ASIS</div></div>{!entry.matchId && <button onClick={() => setLinkEntry(entry)} className="min-h-10 rounded-xl border border-emerald-500/30 px-2 text-[10px] font-bold text-emerald-500">Vincular a partido</button>}<button onClick={() => setSelectedEntry(entry)} className="min-h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-white/10">Editar</button></div>
           </div>})}
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><FireIcon className="h-5 w-5 text-orange-500"/><div className="mt-4 text-2xl font-black">{totals.scoringStreak}</div><div className="text-xs text-slate-400">Racha goleadora</div></div><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><TrophyIcon className="h-5 w-5 text-emerald-500"/><div className="mt-4 text-2xl font-black">{totals.winRate}%</div><div className="text-xs text-slate-400">Partidos ganados</div></div></div>

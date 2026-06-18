@@ -80,7 +80,9 @@ export interface MatchParticipant {
   userId?: string
   guestName?: string
   guestHandle?: string
+  handle?: string
   avatar?: string
+  displayName?: string
   type: MatchParticipantType
   team: MatchTeam
   createdAt: string
