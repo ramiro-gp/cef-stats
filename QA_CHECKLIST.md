@@ -124,6 +124,14 @@ Repetir los intentos equivalentes con A contra datos privados de B.
 - [ ] Crear/abrir un partido local, vincular una carga y navegar desde Perfil al partido.
 - [ ] Confirmar que ninguna operación local crea filas en Supabase.
 
+## Navegación y Auth
+
+- [ ] Recargar una sesión activa no muestra brevemente el login; aparece el splash y luego la app.
+- [ ] `/perfil`, `/grupos`, `/partidos`, `/partidos/:matchId` y `/rankings` sobreviven una recarga directa.
+- [ ] Atrás/adelante conserva la pantalla y la URL, incluyendo lista/detalle de partidos.
+- [ ] Una ruta inválida autenticada muestra 404; sin sesión redirige primero a login y vuelve a 404 después de entrar.
+- [ ] Links `?joinGroup=` y `?match=` conservan la intención durante login.
+
 ## Regresión final
 
 - [ ] `pnpm build`

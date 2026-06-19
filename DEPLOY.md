@@ -10,7 +10,7 @@ pnpm build
 pnpm lint
 ```
 
-La app navega por estado React y hoy solo utiliza la URL `/`. No usa React Router ni rutas client-side reales, por lo que no necesita rewrites de SPA para recargar. Si más adelante se agregan URLs como `/partidos/:id`, habrá que configurar un fallback hacia `/index.html` en Vercel.
+La app usa React Router con rutas client-side reales. `vercel.json` incluye un rewrite SPA hacia `/index.html`, por lo que recargar `/perfil`, `/grupos`, `/partidos/:matchId` u otra ruta declarada debe servir la aplicación y dejar que el router resuelva la pantalla.
 
 Variables locales esperadas en `.env.local`:
 
@@ -106,6 +106,8 @@ El primer comando no debe devolver nada; el segundo debe indicar una regla de `.
    - `VITE_SUPABASE_ANON_KEY`
 7. Cargar ambas para **Production** y, si se usarán previews conectadas a esa base, también para **Preview**.
 8. Ejecutar **Deploy**.
+
+Rutas principales para el smoke test: `/`, `/cargar`, `/perfil`, `/grupos`, `/partidos`, `/partidos/:matchId` y `/rankings`. Una ruta inexistente debe mostrar la pantalla 404 después de resolver Auth.
 
 Las variables Vite se resuelven durante el build. Después de modificarlas en Vercel hay que redeployar; un cambio no altera bundles ya construidos.
 

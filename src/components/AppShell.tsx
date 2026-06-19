@@ -16,7 +16,7 @@ const desktopItems = [
 ]
 
 interface Props {
-  page: Page
+  page: Page | null
   user: User
   group: Group | null
   groups: Group[]

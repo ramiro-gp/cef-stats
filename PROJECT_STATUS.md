@@ -13,7 +13,7 @@ Las cuentas autenticadas siempre disponen de **Mi historial**, un scope virtual 
 - Build de producción: Vite genera `dist` mediante `pnpm build`.
 - Deploy objetivo: Vercel, con configuración explícita en `vercel.json` y pasos en `DEPLOY.md`.
 - Variables requeridas: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-- La navegación actual vive en estado React sobre `/`; no hay rutas client-side que requieran rewrites.
+- React Router administra rutas protegidas, historial atrás/adelante, detalle de partido y 404. Vercel reescribe rutas SPA a `index.html`.
 - Supabase remoto: Auth, profiles, grupos, membresías, stats, partidos, participantes, invitados, score, votos MVP y comentarios.
 - `localStorage`: preferencias, compatibilidad histórica y todo el dominio del modo local interno.
 - Los links de grupos y partidos usan el dominio actual y conservan la intención durante login.

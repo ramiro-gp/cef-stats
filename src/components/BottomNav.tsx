@@ -9,7 +9,7 @@ const items = [
   { page: 'profile' as const, label: 'Perfil', icon: UserIcon },
 ]
 
-export function BottomNav({ page, onNavigate }: { page: Page; onNavigate: (page: Page) => void }) {
+export function BottomNav({ page, onNavigate }: { page: Page | null; onNavigate: (page: Page) => void }) {
   return <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200/80 bg-white/90 px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl dark:border-white/10 dark:bg-[#09130f]/90 lg:hidden">
     <div className="mx-auto grid max-w-lg grid-cols-5">
       {items.map(({ page: itemPage, label, icon: Icon }) => {

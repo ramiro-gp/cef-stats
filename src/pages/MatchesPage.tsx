@@ -28,6 +28,8 @@ interface Props {
   loadError?: string
   onLookupMatch?: (value: string) => Promise<Match | null>
   onInviteConsumed?: () => void
+  onOpenMatch?: (matchId: string) => void
+  onCloseMatch?: () => void
   onCreate: (values: { title: string; scheduledAt: string; format?: MatchFormat }) => Match | Promise<Match>
   onJoinTeam: (matchId: string, team: MatchTeam) => void | Promise<unknown>
   onLeave: (matchId: string) => void | Promise<unknown>
@@ -53,10 +55,10 @@ function ScoreEditor({ match, onSave }: { match: Match; onSave: (score: MatchSco
   return <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><h3 className="font-extrabold">Resultado</h3><div className="mt-3 grid grid-cols-2 gap-3">{counter('Claro', light, setLight, 'text-slate-500 dark:text-slate-200')}{counter('Oscuro', dark, setDark, 'text-slate-800 dark:text-slate-400')}</div><button onClick={() => onSave({ light, dark })} className="mt-3 min-h-12 w-full rounded-xl bg-emerald-500 font-bold text-ink">{match.score ? 'Actualizar resultado' : 'Guardar resultado'}</button></section>
 }
 
-export function MatchesPage({ group, user, matches, entries, initialMatchId = null, initialInviteCode = '', remoteMode = false, loading = false, loadError = '', onLookupMatch, onInviteConsumed, onCreate, onJoinTeam, onLeave, onScore, onMvp, onSaveComment, onDeleteComment, onSaveStats, onAddGuest, onUpdateGuest, onRemoveGuest, onSaveGuestStats }: Props) {
+export function MatchesPage({ group, user, matches, entries, initialMatchId = null, initialInviteCode = '', remoteMode = false, loading = false, loadError = '', onLookupMatch, onInviteConsumed, onOpenMatch, onCloseMatch, onCreate, onJoinTeam, onLeave, onScore, onMvp, onSaveComment, onDeleteComment, onSaveStats, onAddGuest, onUpdateGuest, onRemoveGuest, onSaveGuestStats }: Props) {
   const [creating, setCreating] = useState(false)
   const [joiningByCode, setJoiningByCode] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null)
   const [statsOpen, setStatsOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [guestTeam, setGuestTeam] = useState<MatchTeam | null>(null)
@@ -64,25 +66,27 @@ export function MatchesPage({ group, user, matches, entries, initialMatchId = nu
   const [activeParticipant, setActiveParticipant] = useState<{ participant: MatchParticipant; anchor: PopoverAnchor } | null>(null)
   const [confirmLeave, setConfirmLeave] = useState(false)
   useEffect(() => {
-    if (initialMatchId && matches.some(match => match.id === initialMatchId)) void Promise.resolve().then(() => setSelectedId(initialMatchId))
-  }, [initialMatchId, matches])
-  useEffect(() => {
     if (initialInviteCode) void Promise.resolve().then(() => setJoiningByCode(true))
   }, [initialInviteCode])
+  const selectedId = initialMatchId ?? localSelectedId
   const selected = matches.find(match => match.id === selectedId)
   const allowCreate = !remoteMode || !isPersonalScope(group)
+  const openMatch = (matchId: string) => { if (onOpenMatch) onOpenMatch(matchId); else setLocalSelectedId(matchId) }
+  const closeMatch = () => { setActiveParticipant(null); if (onCloseMatch) onCloseMatch(); else setLocalSelectedId(null) }
   const openParticipant = (participant: MatchParticipant, element: HTMLElement) => {
     const rect = element.getBoundingClientRect()
     setActiveParticipant({ participant, anchor: { top: rect.top, left: rect.left, width: rect.width, height: rect.height } })
   }
 
+  if (initialMatchId && !selected) return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-white/[0.04]">{loading ? <p className="text-sm text-slate-400">Cargando partido...</p> : <><p className="text-3xl">⚽</p><h1 className="mt-3 text-xl font-black">No encontramos este partido</h1><p className="mt-2 text-sm text-slate-400">Puede que no exista o que pertenezca a otro grupo.</p>{loadError && <p className="mt-3 text-sm font-semibold text-rose-500">{loadError}</p>}<button onClick={closeMatch} className="mt-5 min-h-12 rounded-xl bg-emerald-500 px-5 font-bold text-ink">Volver a partidos</button></>}</div>
+
   if (!selected) return <>
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><PageTitle eyebrow={group.name} title="Partidos" subtitle={allowCreate ? 'Organizá la próxima fecha sin tapar la carga rápida.' : 'Elegí un grupo real para crear partidos, o ingresá con un código.'} /><div className="flex shrink-0 gap-2"><button onClick={() => setJoiningByCode(true)} className="min-h-12 rounded-xl border border-emerald-500/30 px-4 text-sm font-extrabold text-emerald-500">Unirme con código</button>{allowCreate && <button onClick={() => setCreating(true)} className="min-h-12 rounded-xl bg-emerald-500 px-4 text-sm font-extrabold text-ink">+ Partido</button>}</div></div>
     {loadError && <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-500">{loadError}</div>}
     {loading && <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando partidos...</div>}
-    {!loading && (matches.length === 0 ? <div className="rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-8 text-center"><div className="text-3xl">⚽</div><p className="mt-3 font-extrabold">Todavía no hay partidos en este grupo</p><p className="mt-1 text-sm text-slate-400">{allowCreate ? 'Creá uno para organizar la próxima fecha.' : 'Ingresá un código de invitación para abrir un partido.'}</p>{allowCreate && <button onClick={() => setCreating(true)} className="mt-5 min-h-12 rounded-xl bg-emerald-500 px-5 font-bold text-ink">Crear primer partido</button>}</div> : <div className="grid gap-3 sm:grid-cols-2">{[...matches].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt)).map(match => <button key={match.id} onClick={() => { setActiveParticipant(null); setSelectedId(match.id) }} className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-500/40 dark:border-white/10 dark:bg-white/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="font-extrabold">{match.title}</p><p className="mt-1 text-xs capitalize text-slate-400">{formatMatchDate(match.scheduledAt)}</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${match.status === 'played' ? 'bg-violet-500/15 text-violet-500' : 'bg-emerald-500/15 text-emerald-500'}`}>{match.status === 'played' ? 'Jugado' : 'Abierto'}</span></div><div className="mt-4 flex items-center justify-between text-sm"><span className="text-slate-400">{match.format ?? 'Formato libre'} · {match.participants.length} anotados</span><span className="font-black">{match.score ? `${match.score.light}–${match.score.dark}` : 'Ver →'}</span></div></button>)}</div>)}
-    {creating && <MatchCreateSheet onCreate={async values => { const match = await onCreate(values); setSelectedId(match.id); return match }} onClose={() => setCreating(false)} />}
-    {joiningByCode && <MatchJoinSheet matches={matches} remoteMode={remoteMode} initialValue={initialInviteCode} onLookup={onLookupMatch} onOpen={match => { setSelectedId(match.id); onInviteConsumed?.() }} onClose={() => setJoiningByCode(false)} />}
+    {!loading && (matches.length === 0 ? <div className="rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-8 text-center"><div className="text-3xl">⚽</div><p className="mt-3 font-extrabold">Todavía no hay partidos en este grupo</p><p className="mt-1 text-sm text-slate-400">{allowCreate ? 'Creá uno para organizar la próxima fecha.' : 'Ingresá un código de invitación para abrir un partido.'}</p>{allowCreate && <button onClick={() => setCreating(true)} className="mt-5 min-h-12 rounded-xl bg-emerald-500 px-5 font-bold text-ink">Crear primer partido</button>}</div> : <div className="grid gap-3 sm:grid-cols-2">{[...matches].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt)).map(match => <button key={match.id} onClick={() => { setActiveParticipant(null); openMatch(match.id) }} className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-500/40 dark:border-white/10 dark:bg-white/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="font-extrabold">{match.title}</p><p className="mt-1 text-xs capitalize text-slate-400">{formatMatchDate(match.scheduledAt)}</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${match.status === 'played' ? 'bg-violet-500/15 text-violet-500' : 'bg-emerald-500/15 text-emerald-500'}`}>{match.status === 'played' ? 'Jugado' : 'Abierto'}</span></div><div className="mt-4 flex items-center justify-between text-sm"><span className="text-slate-400">{match.format ?? 'Formato libre'} · {match.participants.length} anotados</span><span className="font-black">{match.score ? `${match.score.light}–${match.score.dark}` : 'Ver →'}</span></div></button>)}</div>)}
+    {creating && <MatchCreateSheet onCreate={async values => { const match = await onCreate(values); openMatch(match.id); return match }} onClose={() => setCreating(false)} />}
+    {joiningByCode && <MatchJoinSheet matches={matches} remoteMode={remoteMode} initialValue={initialInviteCode} onLookup={onLookupMatch} onOpen={match => { onInviteConsumed?.(); openMatch(match.id) }} onClose={() => setJoiningByCode(false)} />}
   </>
 
   const myParticipant = selected.participants.find(participant => participant.userId === user.id)
@@ -109,7 +113,7 @@ export function MatchesPage({ group, user, matches, entries, initialMatchId = nu
   const copyInvite = () => { const url = new URL('/', window.location.origin); url.searchParams.set('match', selected.inviteCode); void navigator.clipboard?.writeText(url.toString()); setCopied(true); window.setTimeout(() => setCopied(false), 1500) }
 
   return <>
-    <button onClick={() => { setActiveParticipant(null); setSelectedId(null) }} className="mb-4 min-h-10 text-sm font-bold text-emerald-500">← Todos los partidos</button>
+    <button onClick={closeMatch} className="mb-4 min-h-10 text-sm font-bold text-emerald-500">← Todos los partidos</button>
     {loadError && <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-500">{loadError}</div>}
     <div className="mb-6 flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-500">{group.name}</p><h1 className="mt-1 text-2xl font-black">{selected.title}</h1><p className="mt-1 text-sm capitalize text-slate-400">{formatMatchDate(selected.scheduledAt)} · {selected.format ?? 'Formato libre'}</p></div><span className="rounded-full bg-emerald-500/15 px-3 py-1.5 text-[10px] font-black uppercase text-emerald-500">{selected.status === 'played' ? 'Jugado' : 'Abierto'}</span></div>
     <div className="grid gap-5 lg:grid-cols-[1fr_340px]">

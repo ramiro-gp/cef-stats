@@ -4,6 +4,8 @@ Prototipo funcional mobile-first para cargar estadísticas post partido, compara
 
 La versión publicada se toma de `package.json` y se muestra de forma discreta en el sidebar de escritorio y al pie del contenido en mobile.
 
+La navegación usa React Router: las pantallas principales tienen URLs recargables, el historial del navegador funciona y las rutas inválidas muestran una pantalla 404 protegida por Auth.
+
 Documentación técnica: [`PROJECT_STATUS.md`](./PROJECT_STATUS.md). Deploy: [`DEPLOY.md`](./DEPLOY.md). Plan de migración: [`SUPABASE_PLAN.md`](./SUPABASE_PLAN.md). QA manual de scopes y RLS: [`QA_CHECKLIST.md`](./QA_CHECKLIST.md).
 
 ## Estado de producción / staging

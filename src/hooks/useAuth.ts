@@ -8,6 +8,7 @@ export function useAuth() {
   const [profile, setProfile] = useState<AuthProfile | null>(null)
   const [loading, setLoading] = useState(authRepository.configured)
   const [error, setError] = useState('')
+  const status = loading ? 'loading' : user && profile ? 'authenticated' : 'unauthenticated'
 
   const syncSession = useCallback(async (session: Session | null) => {
     setUser(session?.user ?? null)
@@ -27,7 +28,11 @@ export function useAuth() {
   useEffect(() => {
     if (!authRepository.configured) return
     let active = true
-    void authRepository.getSession().then(session => { if (active) void syncSession(session) })
+    void authRepository.getSession().then(session => { if (active) void syncSession(session) }).catch(reason => {
+      if (!active) return
+      setError(reason instanceof Error ? reason.message : 'No pudimos recuperar tu sesión.')
+      setLoading(false)
+    })
     const unsubscribe = authRepository.onAuthStateChange(session => { if (active) window.setTimeout(() => void syncSession(session), 0) })
     return () => { active = false; unsubscribe() }
   }, [syncSession])
@@ -48,15 +53,27 @@ export function useAuth() {
     return {}
   }, [user])
 
+  const signOut = useCallback(async (): Promise<AuthResult> => {
+    const result = await authRepository.signOut()
+    if (!result.error) {
+      setUser(null)
+      setProfile(null)
+      setError('')
+      setLoading(false)
+    }
+    return result
+  }, [])
+
   return {
     configured: authRepository.configured,
+    status,
     user,
     profile,
     loading,
     error,
     signIn: authRepository.signIn,
     signUp: (values: SignUpValues) => authRepository.signUp(values),
-    signOut: authRepository.signOut,
+    signOut,
     refreshProfile,
     updateProfile,
   }
