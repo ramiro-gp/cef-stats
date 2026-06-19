@@ -31,7 +31,7 @@ import { supabaseRepository } from './data/supabaseRepository'
 
 function mergeAuthProfile(profile: AuthProfile, localUser: User): User {
   const initials = profile.name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() || localUser.initials
-  return { ...localUser, id: profile.id, name: profile.name, nickname: profile.name, username: profile.handle, avatar: profile.avatar || initials, initials, position: profile.position ?? '' }
+  return { ...localUser, id: profile.id, name: profile.name, nickname: profile.name, username: profile.handle, avatar: profile.avatar || initials, initials, position: profile.position ?? '', defaultMatchType: profile.defaultMatchType, defaultFootballFormat: profile.defaultFootballFormat }
 }
 
 function initialGroupInviteCode(): string {
@@ -136,7 +136,7 @@ export default function App() {
 
   const saveUser = async (nextUser: User): Promise<void | string> => {
     if (accountMode) {
-      const result = await auth.updateProfile({ name: nextUser.name, handle: nextUser.username, avatar: nextUser.avatar, position: nextUser.position || null })
+      const result = await auth.updateProfile({ name: nextUser.name, handle: nextUser.username, avatar: nextUser.avatar, position: nextUser.position || null, defaultMatchType: nextUser.defaultMatchType, defaultFootballFormat: nextUser.defaultFootballFormat })
       if (result.error) return result.error
       return
     }
@@ -220,7 +220,7 @@ export default function App() {
     await profileHistory.reload()
   }
 
-  const saveQuickStats = async (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team'>, contextId: string): Promise<StatEntry> => {
+  const saveQuickStats = async (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>, contextId: string): Promise<StatEntry> => {
     if (!accountMode) return store.addEntry(values, contextId)
     if (values.matchId) return remoteMatches.saveStats(values.matchId, values)
     const personalContextId = remoteGroups.personalScope?.id

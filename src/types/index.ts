@@ -10,6 +10,10 @@ export type MatchFormat = 'F5' | 'F6' | 'F7' | 'F8' | 'F11'
 export type MatchStatus = 'open' | 'played' | 'closed'
 export type MatchTeam = 'light' | 'dark'
 export type PlayerPosition = 'Arquero' | 'Defensor' | 'Mediocampista' | 'Delantero'
+export type StatMatchType = 'friendly' | 'tournament'
+export type StatFootballFormat = 'F5' | 'F8'
+export type LoadMatchTypePreference = StatMatchType | 'ask'
+export type LoadFormatPreference = StatFootballFormat | 'ask'
 export type MatchEventType = 'created' | 'joined_team' | 'left_match' | 'score_saved' | 'mvp_selected' | 'guest_added' | 'guest_removed' | 'guest_stats' | 'stats_linked'
 export type MatchParticipantType = 'registered_user' | 'guest'
 export type GroupMemberRole = 'owner' | 'admin' | 'member'
@@ -24,6 +28,8 @@ export interface User {
   initials: string
   avatar: string
   position: PlayerPosition | ''
+  defaultMatchType: LoadMatchTypePreference
+  defaultFootballFormat: LoadFormatPreference
 }
 
 export interface AuthProfile {
@@ -32,6 +38,8 @@ export interface AuthProfile {
   handle: string
   avatar: string | null
   position: PlayerPosition | null
+  defaultMatchType: LoadMatchTypePreference
+  defaultFootballFormat: LoadFormatPreference
   createdAt: string
   updatedAt: string
 }
@@ -74,6 +82,9 @@ export interface StatEntry {
   assists: number
   matchId?: string
   team?: MatchTeam
+  matchType?: StatMatchType
+  footballFormat?: StatFootballFormat
+  playedPosition?: PlayerPosition
 }
 
 export interface MatchParticipant {

@@ -84,9 +84,9 @@ export function useLocalStore() {
     appRepository.save(state)
   }, [state])
 
-  const addEntry = useCallback((values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team'>, groupIdOverride?: string) => {
+  const addEntry = useCallback((values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>, groupIdOverride?: string) => {
     const createdAt = new Date().toISOString()
-    const linkedValues = values as Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team'>
+    const linkedValues = values
     const linkedMatch = linkedValues.matchId ? state.matches.find(match => match.id === linkedValues.matchId) : undefined
     const entry: StatEntry = {
       ...linkedValues,
@@ -296,4 +296,4 @@ export function useLocalStore() {
   return useMemo(() => ({ ...state, group, addEntry, updateEntry, deleteEntry, resetData, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch }), [state, group, addEntry, updateEntry, deleteEntry, resetData, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch])
 }
 
-export type AddStatEntry = (values: { result: MatchResult; goals: number; assists: number; matchId?: string; team?: MatchTeam }) => StatEntry | Promise<StatEntry>
+export type AddStatEntry = (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>) => StatEntry | Promise<StatEntry>

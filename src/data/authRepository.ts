@@ -1,6 +1,6 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
-import type { AuthProfile, PlayerPosition } from '../types'
+import type { AuthProfile, LoadFormatPreference, LoadMatchTypePreference, PlayerPosition } from '../types'
 import { normalizeHandle } from '../utils/identity'
 
 interface ProfileRow {
@@ -9,6 +9,8 @@ interface ProfileRow {
   handle: string
   avatar: string | null
   position: PlayerPosition | null
+  default_match_type: LoadMatchTypePreference
+  default_football_format: LoadFormatPreference
   created_at: string
   updated_at: string
 }
@@ -26,10 +28,10 @@ export interface SignUpValues {
   handle: string
 }
 
-const profileColumns = 'id,name,handle,avatar,position,created_at,updated_at'
+const profileColumns = 'id,name,handle,avatar,position,default_match_type,default_football_format,created_at,updated_at'
 
 function toProfile(row: ProfileRow): AuthProfile {
-  return { id: row.id, name: row.name, handle: row.handle, avatar: row.avatar, position: row.position, createdAt: row.created_at, updatedAt: row.updated_at }
+  return { id: row.id, name: row.name, handle: row.handle, avatar: row.avatar, position: row.position, defaultMatchType: row.default_match_type ?? 'friendly', defaultFootballFormat: row.default_football_format ?? 'F5', createdAt: row.created_at, updatedAt: row.updated_at }
 }
 
 export function authErrorMessage(reason: unknown): string {
@@ -52,6 +54,7 @@ export function authErrorMessage(reason: unknown): string {
   if (normalized.includes('weak_password') || normalized.includes('password should') || normalized.includes('password must') || normalized.includes('at least 6')) return 'La contraseña no cumple los requisitos de seguridad. Usá al menos 6 caracteres.'
   if (status === 429 || normalized.includes('rate limit') || normalized.includes('too many requests') || normalized.includes('over_email_send_rate_limit')) return 'Demasiados intentos. Esperá unos minutos y volvé a probar.'
   if (normalized.includes('position') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/004_add_profile_position.sql.'
+  if ((normalized.includes('default_match_type') || normalized.includes('default_football_format')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/009_add_stat_entry_context.sql.'
   if (status >= 500 || normalized.includes('internal server error') || normalized.includes('unexpected_failure')) return 'Supabase tuvo un error interno. Probá nuevamente en unos minutos.'
   return rawMessage.trim() && rawMessage.trim() !== '{}' ? rawMessage.trim() : 'No pudimos completar la operación. Probá nuevamente.'
 }
@@ -137,10 +140,10 @@ export const authRepository = {
     const response = await client.auth.signOut()
     return response.error ? { error: authErrorMessage(response.error) } : {}
   },
-  async updateProfile(user: SupabaseUser, values: Pick<AuthProfile, 'name' | 'handle' | 'avatar' | 'position'>): Promise<{ profile?: AuthProfile; error?: string }> {
+  async updateProfile(user: SupabaseUser, values: Pick<AuthProfile, 'name' | 'handle' | 'avatar' | 'position' | 'defaultMatchType' | 'defaultFootballFormat'>): Promise<{ profile?: AuthProfile; error?: string }> {
     const { client, error } = requireClient()
     if (!client) return { error: error! }
-    const response = await client.from('profiles').update({ name: values.name.trim(), handle: normalizeHandle(values.handle), avatar: values.avatar?.trim() || null, position: values.position || null, updated_at: new Date().toISOString() }).eq('id', user.id).select(profileColumns).single<ProfileRow>()
+    const response = await client.from('profiles').update({ name: values.name.trim(), handle: normalizeHandle(values.handle), avatar: values.avatar?.trim() || null, position: values.position || null, default_match_type: values.defaultMatchType, default_football_format: values.defaultFootballFormat, updated_at: new Date().toISOString() }).eq('id', user.id).select(profileColumns).single<ProfileRow>()
     if (response.error) return { error: authErrorMessage(response.error) }
     return { profile: toProfile(response.data) }
   },

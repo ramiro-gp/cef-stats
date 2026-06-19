@@ -45,7 +45,7 @@ export function useAuth() {
     return {}
   }, [user])
 
-  const updateProfile = useCallback(async (values: Pick<AuthProfile, 'name' | 'handle' | 'avatar' | 'position'>): Promise<AuthResult> => {
+  const updateProfile = useCallback(async (values: Pick<AuthProfile, 'name' | 'handle' | 'avatar' | 'position' | 'defaultMatchType' | 'defaultFootballFormat'>): Promise<AuthResult> => {
     if (!user) return { error: 'No hay una sesión activa.' }
     const result = await authRepository.updateProfile(user, values)
     if (result.error) return { error: result.error }

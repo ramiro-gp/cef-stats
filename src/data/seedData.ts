@@ -8,6 +8,8 @@ export const defaultUser: User = {
   initials: 'RA',
   avatar: 'RA',
   position: '',
+  defaultMatchType: 'friendly',
+  defaultFootballFormat: 'F5',
 }
 
 export const defaultGroup: Group = {

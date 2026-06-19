@@ -1,5 +1,5 @@
 import { supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
-import type { Group, GroupMemberRole, GroupMemberView, MatchResult, MatchTeam, StatEntry, StatScopeType } from '../types'
+import type { Group, GroupMemberRole, GroupMemberView, MatchResult, MatchTeam, PlayerPosition, StatEntry, StatFootballFormat, StatMatchType, StatScopeType } from '../types'
 import { createStringStorageAdapter } from './localStorageAdapter'
 import { normalizeGroupCode } from '../utils/groups'
 
@@ -38,13 +38,16 @@ interface StatEntryRow {
   local_match_id: string | null
   match_id: string | null
   team: MatchTeam | null
+  match_type: StatMatchType | null
+  football_format: StatFootballFormat | null
+  played_position: PlayerPosition | null
   played_at: string
   created_at: string
   updated_at: string
 }
 
 export type StatScope = { type: 'personal'; userId: string } | { type: 'group'; userId: string; groupId: string } | { type: 'all'; userId: string; groupIds: string[] }
-export type StatEntryInput = Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team'> & { playedAt?: string }
+export type StatEntryInput = Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'> & { playedAt?: string }
 
 const activeGroupStorage = createStringStorageAdapter('cef-stats-active-supabase-group')
 
@@ -69,6 +72,7 @@ function toGroup(row: GroupRow, memberCount: number): Group {
 function statError(message: string): string {
   const normalized = message.toLowerCase()
   if (normalized.includes('match_id') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
+  if ((normalized.includes('match_type') || normalized.includes('football_format') || normalized.includes('played_position')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/009_add_stat_entry_context.sql.'
   if (normalized.includes('stat_entries') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/002_add_stat_entries.sql.'
   if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para guardar stats en este scope. Revisá tu membresía o participación en el partido.'
   if (normalized.includes('authentication') || normalized.includes('jwt')) return 'Tu sesión venció. Volvé a iniciar sesión.'
@@ -86,13 +90,16 @@ function toStatEntry(row: StatEntryRow): StatEntry {
     assists: row.assists,
     matchId: row.match_id ?? row.local_match_id ?? undefined,
     team: row.team ?? undefined,
+    matchType: row.match_type ?? 'friendly',
+    footballFormat: row.football_format ?? 'F5',
+    playedPosition: row.played_position ?? undefined,
     playedAt: row.played_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
 }
 
-const statColumns = 'id,user_id,scope_type,group_id,result,goals,assists,match_id,local_match_id,team,played_at,created_at,updated_at'
+const statColumns = 'id,user_id,scope_type,group_id,result,goals,assists,match_id,local_match_id,team,match_type,football_format,played_position,played_at,created_at,updated_at'
 
 export const supabaseRepository = {
   getPersistedActiveGroupId: activeGroupStorage.load,
@@ -215,6 +222,9 @@ export const supabaseRepository = {
       match_id: input.matchId ?? null,
       local_match_id: null,
       team: input.team ?? null,
+      match_type: input.matchType ?? 'friendly',
+      football_format: input.footballFormat ?? 'F5',
+      played_position: input.playedPosition ?? null,
       played_at: input.playedAt ?? new Date().toISOString(),
     }).select(statColumns).single<StatEntryRow>()
     if (result.error) throw new Error(statError(result.error.message))
@@ -228,6 +238,9 @@ export const supabaseRepository = {
     if (input.assists !== undefined) values.assists = input.assists
     if (input.matchId !== undefined) { values.match_id = input.matchId; values.local_match_id = null }
     if (input.team !== undefined) values.team = input.team
+    if (input.matchType !== undefined) values.match_type = input.matchType
+    if (input.footballFormat !== undefined) values.football_format = input.footballFormat
+    if (input.playedPosition !== undefined) values.played_position = input.playedPosition || null
     if (input.playedAt !== undefined) values.played_at = input.playedAt
     const result = await client().from('stat_entries').update(values).eq('id', id).eq('user_id', userId).select(statColumns).single<StatEntryRow>()
     if (result.error) throw new Error(statError(result.error.message))

@@ -37,7 +37,7 @@ interface Props {
   onMvp: (matchId: string, participantId: string) => void | Promise<unknown>
   onSaveComment?: (matchId: string, body: string) => void | Promise<unknown>
   onDeleteComment?: (matchId: string) => void | Promise<unknown>
-  onSaveStats: (matchId: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'team'>) => void | Promise<void>
+  onSaveStats: (matchId: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'team'>) => void | Promise<unknown>
   onAddGuest: (matchId: string, values: { name: string; avatar?: string; team: MatchTeam }) => void | Promise<unknown>
   onUpdateGuest: (matchId: string, participantId: string, values: { name: string; avatar?: string }) => void | Promise<unknown>
   onRemoveGuest: (matchId: string, participantId: string) => void | Promise<unknown>
@@ -137,7 +137,7 @@ export function MatchesPage({ group, user, matches, entries, initialMatchId = nu
         {remoteMode && myParticipant && onSaveComment && onDeleteComment && <MatchCommentsSection key={selected.id} comments={selected.comments ?? []} userId={user.id} onSave={body => onSaveComment(selected.id, body)} onDelete={() => onDeleteComment(selected.id)} />}
       </aside>
     </div>
-    {statsOpen && <MatchStatsSheet match={selected} userId={user.id} existing={myEntry} onSave={values => onSaveStats(selected.id, values)} onClose={() => setStatsOpen(false)} />}
+    {statsOpen && <MatchStatsSheet match={selected} userId={user.id} existing={myEntry} onSave={async values => { await onSaveStats(selected.id, values) }} onClose={() => setStatsOpen(false)} />}
     {guestTeam && <GuestEditorSheet team={guestTeam} onSave={async values => { await onAddGuest(selected.id, values) }} onClose={() => setGuestTeam(null)} />}
     {editingGuest && <GuestEditorSheet guest={editingGuest} team={editingGuest.team ?? 'light'} onSave={async values => { await onUpdateGuest(selected.id, editingGuest.id, values) }} onClose={() => setEditingGuest(null)} />}
     {activeParticipant && <ParticipantPopover participant={activeParticipant.participant} anchor={activeParticipant.anchor} user={user} entry={matchEntries.find(entry => entry.userId === activeParticipant.participant.userId)} guestStats={selected.guestStats.find(stats => stats.participantId === activeParticipant.participant.id)} isMvp={selected.mvpParticipantId === activeParticipant.participant.id} isCreator={selected.createdByUserId === user.id} onSaveGuestStats={async (goals, assists) => { await onSaveGuestStats(selected.id, activeParticipant.participant.id, goals, assists) }} onEditGuest={() => { setEditingGuest(activeParticipant.participant); setActiveParticipant(null) }} onRemoveGuest={() => { void Promise.resolve(onRemoveGuest(selected.id, activeParticipant.participant.id)).catch(() => undefined); setActiveParticipant(null) }} onClose={() => setActiveParticipant(null)} />}

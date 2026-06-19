@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CheckIcon, FireIcon } from '../components/icons'
 import { PageTitle } from '../components/PageTitle'
 import { MatchCodePickerSheet, type MatchLinkSelection } from '../components/MatchCodePickerSheet'
-import type { Group, Match, MatchResult, Page, StatEntry, User } from '../types'
+import type { Group, Match, MatchResult, Page, PlayerPosition, StatEntry, StatFootballFormat, StatMatchType, User } from '../types'
 import type { AddStatEntry } from '../store/useLocalStore'
 
 const resultOptions: { value: MatchResult; label: string; emoji: string }[] = [
@@ -10,6 +10,8 @@ const resultOptions: { value: MatchResult; label: string; emoji: string }[] = [
   { value: 'draw', label: 'Empaté', emoji: '🤝' },
   { value: 'loss', label: 'Perdí', emoji: '😮‍💨' },
 ]
+
+const positionOptions: PlayerPosition[] = ['Arquero', 'Defensor', 'Mediocampista', 'Delantero']
 
 function Counter({ label, value, onChange }: { label: string; value: number; onChange: (next: number) => void }) {
   return <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04] sm:p-5">
@@ -43,14 +45,20 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [contextId, setContextId] = useState(defaultContextId)
+  const [matchType, setMatchType] = useState<StatMatchType>(user.defaultMatchType === 'ask' ? 'friendly' : user.defaultMatchType)
+  const [footballFormat, setFootballFormat] = useState<StatFootballFormat>(user.defaultFootballFormat === 'ask' ? 'F5' : user.defaultFootballFormat)
+  const [playedPosition, setPlayedPosition] = useState<PlayerPosition | ''>(user.position)
+  const [detailsOpen, setDetailsOpen] = useState(user.defaultMatchType === 'ask' || user.defaultFootballFormat === 'ask' || (!user.position && (user.defaultMatchType === 'tournament' || user.defaultFootballFormat === 'F8')))
   const contextName = personalContextId && contextId === personalContextId ? 'Personal (sin grupo)' : groups.find(group => group.id === contextId)?.name
+  const positionRelevant = matchType === 'tournament' || footballFormat === 'F8'
+  const matchTypeLabel = matchType === 'tournament' ? 'Torneo' : 'Amistoso'
 
   const save = async () => {
     if (!result || !contextId || saved || saving) return
     setSaving(true)
     setError('')
     try {
-      await onSave({ result: linked?.automaticResult ?? result, goals, assists, matchId: linked?.match.id, team: linked?.team }, contextId)
+      await onSave({ result: linked?.automaticResult ?? result, goals, assists, matchId: linked?.match.id, team: linked?.team, matchType, footballFormat, playedPosition: positionRelevant && playedPosition ? playedPosition : undefined }, contextId)
       setSaved(true)
       window.setTimeout(() => onNavigate('home'), 1200)
     } catch (reason) {
@@ -64,6 +72,14 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
     <PageTitle eyebrow="Carga rápida" title="¿Cómo te fue hoy?" subtitle="Tres toques y listo. Sin vueltas." />
     <div className="space-y-5">
       <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4"><label className="block"><span className="text-xs font-bold uppercase tracking-wider text-emerald-500">Estás cargando dentro de</span><select value={contextId} onChange={event => { setContextId(event.target.value); setLinked(null) }} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí un contexto</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}{personalContextId && <option value={personalContextId}>Personal (sin grupo)</option>}</select></label><p className="mt-2 text-xs leading-5 text-slate-400">{contextName ? `Esta carga se guardará en ${contextName}.` : 'TODOS es sólo una vista: elegí dónde guardar esta carga.'}</p></section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]">
+        <div className="flex items-center justify-between gap-3"><div><p className="text-sm font-extrabold">{matchTypeLabel} · {footballFormat}{positionRelevant && playedPosition ? ` · ${playedPosition}` : ''}</p><p className="mt-1 text-xs text-slate-400">Detalles opcionales de esta carga</p></div><button type="button" onClick={() => setDetailsOpen(open => !open)} className="min-h-10 shrink-0 rounded-xl px-3 text-xs font-bold text-emerald-500">{detailsOpen ? 'Ocultar' : 'Cambiar detalles'}</button></div>
+        {detailsOpen && <div className="mt-4 grid gap-3 border-t border-slate-100 pt-4 dark:border-white/5 sm:grid-cols-2">
+          <label><span className="text-xs font-bold text-slate-500">Tipo de partido</span><select value={matchType} onChange={event => setMatchType(event.target.value as StatMatchType)} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="friendly">Amistoso</option><option value="tournament">Torneo</option></select></label>
+          <label><span className="text-xs font-bold text-slate-500">Formato</span><select value={footballFormat} onChange={event => setFootballFormat(event.target.value as StatFootballFormat)} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="F5">F5</option><option value="F8">F8</option></select></label>
+          {positionRelevant && <label className="sm:col-span-2"><span className="text-xs font-bold text-slate-500">Posición jugada</span><select value={playedPosition} onChange={event => setPlayedPosition(event.target.value as PlayerPosition | '')} className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Sin posición</option>{positionOptions.map(position => <option key={position} value={position}>{position}</option>)}</select></label>}
+        </div>}
+      </section>
       <section>
         <div className="mb-3 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-xs font-black text-ink">1</span><h2 className="text-sm font-bold">Resultado <span className="text-emerald-500">*</span></h2></div>
         <div className="grid grid-cols-3 gap-2.5">

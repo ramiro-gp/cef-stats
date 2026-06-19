@@ -129,7 +129,7 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
   const removeGuest = useCallback((matchId: string, guestId: string) => mutate(async () => upsert(await supabaseMatchRepository.removeGuest(matchId, guestId))), [mutate, upsert])
   const saveGuestStats = useCallback((matchId: string, guestId: string, goals: number, assists: number) => mutate(async () => upsert(await supabaseMatchRepository.saveGuestStats(matchId, guestId, goals, assists))), [mutate, upsert])
 
-  const saveStats = useCallback((matchId: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'team'>) => mutate(async () => {
+  const saveStats = useCallback((matchId: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>) => mutate(async () => {
     if (!userId) throw new Error('Necesitás iniciar sesión.')
     const match = matches.find(item => item.id === matchId)
     if (!match) throw new Error('No encontramos el partido para guardar tus números.')
