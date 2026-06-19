@@ -86,7 +86,7 @@ export interface MatchParticipant {
   avatar?: string
   displayName?: string
   type: MatchParticipantType
-  team: MatchTeam
+  team?: MatchTeam
   createdAt: string
 }
 
@@ -126,6 +126,7 @@ export interface MatchComment {
 export interface Match {
   id: string
   groupId: string
+  groupName?: string
   title: string
   format?: MatchFormat
   scheduledAt: string
@@ -190,6 +191,7 @@ export interface PersonalWorldCupState {
 export interface ActivityFeedItem {
   id: string
   groupId: string
+  groupName?: string
   icon: ActivityIcon
   category: ActivityCategory
   important: boolean

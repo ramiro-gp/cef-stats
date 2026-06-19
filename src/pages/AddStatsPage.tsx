@@ -23,15 +23,17 @@ function Counter({ label, value, onChange }: { label: string; value: number; onC
 }
 
 interface Props {
-  onSave: AddStatEntry
+  onSave: (values: Parameters<AddStatEntry>[0], contextId: string) => ReturnType<AddStatEntry>
   onNavigate: (page: Page) => void
   matches: Match[]
   groups: Group[]
   entries: StatEntry[]
   user: User
+  defaultContextId?: string
+  personalContextId?: string
 }
 
-export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, user }: Props) {
+export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, user, defaultContextId = '', personalContextId = '' }: Props) {
   const [result, setResult] = useState<MatchResult | null>(null)
   const [goals, setGoals] = useState(0)
   const [assists, setAssists] = useState(0)
@@ -40,13 +42,15 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
   const [linked, setLinked] = useState<MatchLinkSelection | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [contextId, setContextId] = useState(defaultContextId)
+  const contextName = personalContextId && contextId === personalContextId ? 'Personal (sin grupo)' : groups.find(group => group.id === contextId)?.name
 
   const save = async () => {
-    if (!result || saved || saving) return
+    if (!result || !contextId || saved || saving) return
     setSaving(true)
     setError('')
     try {
-      await onSave({ result: linked?.automaticResult ?? result, goals, assists, matchId: linked?.match.id, team: linked?.team })
+      await onSave({ result: linked?.automaticResult ?? result, goals, assists, matchId: linked?.match.id, team: linked?.team }, contextId)
       setSaved(true)
       window.setTimeout(() => onNavigate('home'), 1200)
     } catch (reason) {
@@ -59,6 +63,7 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
   return <div className="mx-auto max-w-2xl">
     <PageTitle eyebrow="Carga rápida" title="¿Cómo te fue hoy?" subtitle="Tres toques y listo. Sin vueltas." />
     <div className="space-y-5">
+      <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4"><label className="block"><span className="text-xs font-bold uppercase tracking-wider text-emerald-500">Estás cargando dentro de</span><select value={contextId} onChange={event => { setContextId(event.target.value); setLinked(null) }} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí un contexto</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}{personalContextId && <option value={personalContextId}>Personal (sin grupo)</option>}</select></label><p className="mt-2 text-xs leading-5 text-slate-400">{contextName ? `Esta carga se guardará en ${contextName}.` : 'TODOS es sólo una vista: elegí dónde guardar esta carga.'}</p></section>
       <section>
         <div className="mb-3 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-xs font-black text-ink">1</span><h2 className="text-sm font-bold">Resultado <span className="text-emerald-500">*</span></h2></div>
         <div className="grid grid-cols-3 gap-2.5">
@@ -75,11 +80,12 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
       </section>
       <div className="rounded-2xl bg-slate-100 p-4 text-xs text-slate-500 dark:bg-white/[0.04] dark:text-slate-400"><FireIcon className="mr-2 inline h-4 w-4 text-orange-500" />Guardá tus números y actualizamos tu racha.</div>
       {error && <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{error}</div>}
-      <button type="button" onClick={() => void save()} disabled={!result || saved || saving} className="flex min-h-16 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 font-extrabold text-ink shadow-glow transition hover:bg-emerald-400 active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-slate-600">
+      <button type="button" onClick={() => void save()} disabled={!result || !contextId || saved || saving} className="flex min-h-16 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 font-extrabold text-ink shadow-glow transition hover:bg-emerald-400 active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-slate-600">
         {saved ? <><CheckIcon /> ¡Stats guardadas!</> : saving ? 'Guardando...' : 'Guardar stats'}
       </button>
       {!result && <p className="-mt-2 text-center text-xs text-slate-400">Elegí un resultado para poder guardar</p>}
+      {!contextId && <p className="-mt-2 text-center text-xs text-slate-400">Elegí dónde guardar la carga.</p>}
     </div>
-    {linking && <MatchCodePickerSheet matches={matches} groups={groups} entries={entries} userId={user.id} onSelect={selection => { setLinked(selection); if (selection.automaticResult) setResult(selection.automaticResult) }} onClose={() => setLinking(false)} />}
+    {linking && <MatchCodePickerSheet matches={matches} groups={groups} entries={entries} userId={user.id} onSelect={selection => { setLinked(selection); setContextId(selection.match.groupId); if (selection.automaticResult) setResult(selection.automaticResult) }} onClose={() => setLinking(false)} />}
   </div>
 }

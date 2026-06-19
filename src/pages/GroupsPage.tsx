@@ -52,14 +52,14 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
   }
 
   return <>
-    <PageTitle eyebrow={remoteMode ? 'Comunidad · Supabase' : 'Comunidad · Local'} title={remoteMode ? 'Mis grupos compartidos' : 'Mis grupos'} subtitle={remoteMode ? 'Los grupos son opcionales: Mi historial siempre está disponible.' : 'Cada grupo conserva sus propias cargas, movimientos y rankings.'} />
-    {remoteMode && <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] p-4 text-sm"><strong className="text-emerald-500">Mi historial</strong><span className="text-slate-500 dark:text-slate-300"> es tu espacio personal. Creá un grupo cuando quieras comparar tus números con amigos.</span></div>}
+    <PageTitle eyebrow={remoteMode ? 'Comunidad · Supabase' : 'Comunidad · Local'} title={remoteMode ? 'Mis grupos compartidos' : 'Mis grupos'} subtitle={remoteMode ? 'Administrá únicamente tus grupos reales. El historial personal vive en Perfil.' : 'Cada grupo conserva sus propias cargas, movimientos y rankings.'} />
+    {remoteMode && <div className="mb-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.07] p-4 text-sm"><strong className="text-emerald-500">TODOS</strong><span className="text-slate-500 dark:text-slate-300"> es sólo una vista combinada. No se edita ni admite invitaciones.</span></div>}
     {loadError && <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-500">{loadError}</div>}
     <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
       <div className="space-y-5">
         <section className="space-y-3">
           {loading && <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando grupos...</div>}
-          {!loading && groups.length === 0 && <div className="rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-8 text-center"><UsersIcon className="mx-auto h-8 w-8 text-emerald-500" /><p className="mt-3 font-extrabold">Todavía no tenés grupos</p><p className="mt-1 text-sm leading-6 text-slate-400">{remoteMode ? 'Podés usar Mi historial o crear un grupo para compararte con amigos.' : 'Creá uno o unite con código.'}</p></div>}
+          {!loading && groups.length === 0 && <div className="rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-8 text-center"><UsersIcon className="mx-auto h-8 w-8 text-emerald-500" /><p className="mt-3 font-extrabold">Todavía no tenés grupos</p><p className="mt-1 text-sm leading-6 text-slate-400">{remoteMode ? 'Tu historial personal sigue disponible en Perfil. Creá un grupo para compartir y comparar.' : 'Creá uno o unite con código.'}</p></div>}
           {groups.map(group => {
             const active = group.id === currentGroup?.id
             return <div key={group.id} className={`flex items-center gap-3 rounded-2xl border p-3 transition ${active ? 'border-emerald-500/50 bg-emerald-500/[0.07]' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]'}`}>

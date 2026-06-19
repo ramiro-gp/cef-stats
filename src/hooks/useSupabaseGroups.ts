@@ -1,19 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabaseRepository } from '../data/supabaseRepository'
 import type { Group, GroupMemberView } from '../types'
-import { createPersonalScope } from '../utils/scopes'
+import { createAllScope, createPersonalScope } from '../utils/scopes'
 
 export function useSupabaseGroups(userId: string | null) {
   const [groups, setGroups] = useState<Group[]>([])
   const [activeGroupId, setActiveGroupId] = useState<string | null>(() => supabaseRepository.getPersistedActiveGroupId())
   const [members, setMembers] = useState<GroupMemberView[]>([])
+  const [allMembers, setAllMembers] = useState<GroupMemberView[]>([])
   const [loading, setLoading] = useState(Boolean(userId))
   const [membersLoading, setMembersLoading] = useState(false)
   const [error, setError] = useState('')
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null)
   const personalScope = useMemo(() => userId ? createPersonalScope(userId) : null, [userId])
-  const scopes = useMemo(() => personalScope ? [personalScope, ...groups] : groups, [groups, personalScope])
-  const activeScope = useMemo(() => scopes.find(group => group.id === activeGroupId) ?? personalScope ?? groups[0] ?? null, [activeGroupId, groups, personalScope, scopes])
+  const allScope = useMemo(() => userId ? createAllScope(userId) : null, [userId])
+  const scopes = useMemo(() => [...(allScope ? [allScope] : []), ...groups], [allScope, groups])
+  const activeScope = useMemo(() => scopes.find(group => group.id === activeGroupId) ?? allScope ?? groups[0] ?? null, [activeGroupId, allScope, groups, scopes])
   const activeSharedGroup = useMemo(() => groups.find(group => group.id === activeScope?.id) ?? null, [activeScope?.id, groups])
 
   const selectGroup = useCallback((group: Group) => {
@@ -24,6 +26,7 @@ export function useSupabaseGroups(userId: string | null) {
   const loadGroups = useCallback(async () => {
     if (!userId) {
       setGroups([])
+      setAllMembers([])
       setLoadedUserId(null)
       setLoading(false)
       return []
@@ -33,10 +36,11 @@ export function useSupabaseGroups(userId: string | null) {
     try {
       const loaded = await supabaseRepository.getGroups(userId)
       setGroups(loaded)
+      setAllMembers(await supabaseRepository.getMembersForGroups(loaded.map(group => group.id)))
       const persisted = supabaseRepository.getPersistedActiveGroupId()
-      const personalId = `personal:${userId}`
-      const persistedIsValid = persisted === personalId || Boolean(persisted && loaded.some(group => group.id === persisted))
-      const nextActiveId = persistedIsValid && persisted ? persisted : personalId
+      const allId = `all:${userId}`
+      const persistedIsValid = persisted === allId || Boolean(persisted && loaded.some(group => group.id === persisted))
+      const nextActiveId = persistedIsValid && persisted ? persisted : allId
       setActiveGroupId(nextActiveId)
       supabaseRepository.persistActiveGroupId(nextActiveId)
       return loaded
@@ -91,5 +95,5 @@ export function useSupabaseGroups(userId: string | null) {
     setGroups(current => current.map(group => group.id === id ? updated : group))
   }, [])
 
-  return { groups, scopes, personalScope, activeScope, activeSharedGroup, members: activeSharedGroup ? members : [], loading, ready: !userId || loadedUserId === userId, membersLoading: activeSharedGroup ? membersLoading : false, error, selectGroup, createGroup, joinGroup, updateGroup, reload: loadGroups }
+  return { groups, scopes, allScope, personalScope, activeScope, activeSharedGroup, members: activeSharedGroup ? members : [], allMembers, loading, ready: !userId || loadedUserId === userId, membersLoading: activeSharedGroup ? membersLoading : false, error, selectGroup, createGroup, joinGroup, updateGroup, reload: loadGroups }
 }

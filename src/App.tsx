@@ -10,15 +10,16 @@ import { ProfilePage } from './pages/ProfilePage'
 import { RankingsPage } from './pages/RankingsPage'
 import { MatchesPage } from './pages/MatchesPage'
 import { NotFoundPage } from './pages/NotFoundPage'
-import type { AuthProfile, GroupMemberView, Page, RankingPlayer, User } from './types'
-import { buildGroupRankings, calculateUserTotals } from './utils/stats'
+import type { AuthProfile, GroupMemberView, Page, RankingPlayer, StatEntry, User } from './types'
+import { buildGroupRankings, buildRankings, calculateUserTotals } from './utils/stats'
 import { calculatePersonalWorldCup } from './utils/worldCup'
 import { useTheme } from './hooks/useTheme'
 import { getGroupEntries } from './utils/selectors'
 import { useAuth } from './hooks/useAuth'
 import { useSupabaseGroups } from './hooks/useSupabaseGroups'
 import { useSupabaseStats } from './hooks/useSupabaseStats'
-import { isPersonalScope } from './utils/scopes'
+import { useSupabaseProfileHistory } from './hooks/useSupabaseProfileHistory'
+import { isAllScope, isPersonalScope } from './utils/scopes'
 import { extractGroupInviteCode } from './utils/groups'
 import { groupInviteIntentRepository } from './data/groupInviteIntentRepository'
 import { extractInviteCode, isTeamFull, isValidMatchCode } from './utils/matches'
@@ -26,6 +27,7 @@ import { useSupabaseMatches } from './hooks/useSupabaseMatches'
 import { matchInviteIntentRepository } from './data/matchInviteIntentRepository'
 import { AuthSplash } from './components/AuthSplash'
 import { pageFromPathname, pagePaths } from './config/routes'
+import { supabaseRepository } from './data/supabaseRepository'
 
 function mergeAuthProfile(profile: AuthProfile, localUser: User): User {
   const initials = profile.name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() || localUser.initials
@@ -66,8 +68,10 @@ export default function App() {
   const groups = accountMode ? remoteGroups.scopes : store.groups
   const group = accountMode ? remoteGroups.activeScope : store.group
   const selectGroup = accountMode ? remoteGroups.selectGroup : store.setGroup
-  const remoteStats = useSupabaseStats(accountMode ? auth.user!.id : null, accountMode ? remoteGroups.activeScope : null)
-  const remoteMatchGroupId = accountMode && remoteGroups.activeScope && !isPersonalScope(remoteGroups.activeScope) ? remoteGroups.activeScope.id : null
+  const sharedGroupIds = useMemo(() => remoteGroups.groups.map(item => item.id), [remoteGroups.groups])
+  const remoteStats = useSupabaseStats(accountMode ? auth.user!.id : null, accountMode ? remoteGroups.activeScope : null, sharedGroupIds)
+  const profileHistory = useSupabaseProfileHistory(accountMode ? auth.user!.id : null)
+  const remoteMatchGroupId = accountMode ? remoteGroups.activeSharedGroup?.id ?? null : null
   const remoteMatches = useSupabaseMatches(accountMode ? auth.user!.id : null, remoteMatchGroupId)
 
   const navigate = (next: Page) => {
@@ -146,13 +150,18 @@ export default function App() {
 
   if (!group) return <AuthSplash />
 
-  const scopeEntries = accountMode ? remoteStats.entries : getGroupEntries(store.entries, group.id)
+  const allScope = accountMode && isAllScope(group)
+  const allMemberships = new Set(remoteGroups.allMembers.map(member => `${member.groupId}:${member.userId}`))
+  const scopeEntries = accountMode ? (allScope ? remoteStats.entries.filter(entry => entry.groupId && allMemberships.has(`${entry.groupId}:${entry.userId}`)) : remoteStats.entries) : getGroupEntries(store.entries, group.id)
   const groupEntries = accountMode ? scopeEntries.filter(entry => entry.userId === currentUser.id) : scopeEntries
-  const groupMatches = accountMode ? remoteMatches.matches : store.matches.filter(match => match.groupId === group.id)
+  const allMatches = accountMode ? remoteMatches.matches : store.matches.filter(match => match.groupId === group.id)
+  const groupMatches = accountMode ? allMatches.filter(match => allScope ? sharedGroupIds.includes(match.groupId) : match.groupId === group.id) : allMatches
   const groupMatchEvents = accountMode ? [] : store.matchEvents.filter(event => event.groupId === group.id)
   const totals = calculateUserTotals(groupEntries, group.seeded)
+  const rankingMemberSource = allScope ? remoteGroups.allMembers : remoteGroups.members
+  const uniqueRankingMembers = [...new Map(rankingMemberSource.map(member => [member.userId, member])).values()]
   const rankingUsers: User[] = accountMode && !isPersonalScope(group)
-    ? remoteGroups.members.map(member => ({ ...currentUser, id: member.userId, name: member.name, username: member.handle, avatar: member.avatar || member.name.slice(0, 2).toUpperCase(), initials: member.avatar || member.name.slice(0, 2).toUpperCase() }))
+    ? uniqueRankingMembers.map(member => ({ ...currentUser, id: member.userId, name: member.name, username: member.handle, avatar: member.avatar || member.name.slice(0, 2).toUpperCase(), initials: member.avatar || member.name.slice(0, 2).toUpperCase() }))
     : [currentUser]
   if (!rankingUsers.some(user => user.id === currentUser.id)) rankingUsers.unshift(currentUser)
   for (const entry of scopeEntries) {
@@ -162,18 +171,19 @@ export default function App() {
     }
   }
   const rankings: RankingPlayer[] = accountMode
-    ? rankingUsers.flatMap(user => buildGroupRankings(scopeEntries.filter(entry => entry.userId === user.id), group.id, user, false))
+    ? rankingUsers.flatMap(user => {
+      const userEntries = scopeEntries.filter(entry => entry.userId === user.id)
+      const built = allScope ? buildRankings(userEntries, user, false) : buildGroupRankings(userEntries, group.id, user, false)
+      return built.map(player => ({ ...player, isCurrentUser: user.id === currentUser.id }))
+    })
     : buildGroupRankings(store.entries, group.id, currentUser, group.seeded)
   const worldCup = calculatePersonalWorldCup(groupEntries)
   const localMemberPlayers = rankings.length ? rankings : [{ id: currentUser.id, name: currentUser.name, initials: currentUser.avatar, isCurrentUser: true }]
   const localMembers: GroupMemberView[] = localMemberPlayers.map((player, index) => ({ id: `mock-member-${player.id}`, groupId: group.id, userId: player.id, role: index === 0 ? 'owner' : 'member', joinedAt: '2026-06-17T00:00:00.000Z', name: player.name, handle: player.isCurrentUser ? currentUser.username : player.name.toLowerCase(), avatar: player.initials }))
+  const userNames = Object.fromEntries(rankingUsers.map(user => [user.id, user.name]))
+  const groupNames = Object.fromEntries(remoteGroups.groups.map(item => [item.id, item.name]))
   const lookupMatch = accountMode ? async (value: string) => {
-    const found = await remoteMatches.lookupMatch(value)
-    if (found) {
-      const hostGroup = remoteGroups.groups.find(item => item.id === found.groupId)
-      if (hostGroup) remoteGroups.selectGroup(hostGroup)
-    }
-    return found
+    return remoteMatches.lookupMatch(value)
   } : undefined
   const consumeMatchInvite = (matchId?: string) => {
     matchInviteIntentRepository.clear()
@@ -184,24 +194,48 @@ export default function App() {
     routerNavigate({ pathname: matchId ? `${pagePaths.matches}/${matchId}` : location.pathname, search: search.toString() ? `?${search}` : '' }, { replace: true })
   }
   const linkEntry = accountMode ? async (entryId: string, matchId: string, team: 'light' | 'dark', result?: 'win' | 'draw' | 'loss') => {
-    const entry = remoteStats.entries.find(item => item.id === entryId && item.userId === currentUser.id)
-    const match = groupMatches.find(item => item.id === matchId)
-    if (!entry || !match || entry.matchId || isTeamFull(match, team, currentUser.id)) return false
-    if (remoteStats.entries.some(item => item.id !== entryId && item.userId === currentUser.id && item.matchId === matchId)) return false
+    const entry = [...profileHistory.entries, ...remoteStats.entries].find(item => item.id === entryId && item.userId === currentUser.id)
+    const match = allMatches.find(item => item.id === matchId)
+    if (!entry || !match || entry.matchId || entry.groupId !== match.groupId || isTeamFull(match, team, currentUser.id)) return false
+    if (remoteMatches.entries.some(item => item.id !== entryId && item.userId === currentUser.id && item.matchId === matchId)) return false
     await remoteStats.updateEntry(entryId, { matchId, team, ...(result ? { result } : {}) })
+    await profileHistory.reload()
     return true
   } : store.linkEntryToMatch
 
+  const updateProfileHistoryEntry = async (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'>) => {
+    if (!accountMode) return store.updateEntry(id, values)
+    await remoteStats.updateEntry(id, values)
+    await profileHistory.reload()
+  }
+
+  const deleteProfileHistoryEntry = async (id: string) => {
+    if (!accountMode) return store.deleteEntry(id)
+    await remoteStats.deleteEntry(id)
+    await profileHistory.reload()
+  }
+
+  const saveQuickStats = async (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team'>, contextId: string): Promise<StatEntry> => {
+    if (!accountMode) return store.addEntry(values, contextId)
+    if (values.matchId) return remoteMatches.saveStats(values.matchId, values)
+    const personalContextId = remoteGroups.personalScope?.id
+    const scope = contextId === personalContextId
+      ? { type: 'personal' as const, userId: currentUser.id }
+      : remoteGroups.groups.some(item => item.id === contextId)
+        ? { type: 'group' as const, userId: currentUser.id, groupId: contextId }
+        : null
+    if (!scope) throw new Error('Elegí un contexto válido para guardar la carga.')
+    const created = await supabaseRepository.createStatEntry(scope, values)
+    await Promise.all([remoteStats.reload(), profileHistory.reload()])
+    return created
+  }
+
   const pageContent = {
-    home: <HomePage user={currentUser} group={group} entries={groupEntries} matches={groupMatches} matchEvents={groupMatchEvents} totals={totals} rankings={rankings} worldCup={worldCup} onNavigate={navigate} />,
-    add: <AddStatsPage onSave={values => accountMode ? remoteStats.createEntry(values) : store.addEntry(values, group.id)} onNavigate={navigate} matches={groupMatches} groups={groups} entries={accountMode ? scopeEntries : store.entries} user={currentUser} />,
-    matches: <MatchesPage group={group} user={currentUser} matches={groupMatches} entries={accountMode ? scopeEntries : groupEntries} initialMatchId={matchRouteId} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onCloseMatch={() => routerNavigate(pagePaths.matches, { replace: true })} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? async (matchId, values) => {
-      const existing = remoteStats.entries.find(entry => entry.userId === currentUser.id && entry.matchId === matchId)
-      if (existing) await remoteStats.updateEntry(existing.id, values)
-      else await remoteStats.createEntry({ ...values, matchId })
-    } : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} />,
+    home: <HomePage user={currentUser} group={group} entries={allScope ? scopeEntries : groupEntries} matches={groupMatches} matchEvents={groupMatchEvents} totals={totals} rankings={rankings} worldCup={worldCup} onNavigate={navigate} userNames={userNames} groupNames={groupNames} />,
+    add: <AddStatsPage key={group.id} onSave={saveQuickStats} onNavigate={navigate} matches={groupMatches} groups={accountMode ? remoteGroups.groups : store.groups} entries={accountMode ? scopeEntries : store.entries} user={currentUser} defaultContextId={accountMode ? remoteGroups.activeSharedGroup?.id ?? '' : group.id} personalContextId={accountMode ? remoteGroups.personalScope?.id : undefined} />,
+    matches: <MatchesPage group={group} user={currentUser} matches={allMatches} entries={accountMode ? remoteMatches.entries : groupEntries} initialMatchId={matchRouteId} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} creationGroups={accountMode ? remoteGroups.groups : []} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onCloseMatch={() => routerNavigate(pagePaths.matches, { replace: true })} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? remoteMatches.saveStats : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} />,
     rankings: <RankingsPage group={group} players={rankings} />,
-    profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? groupEntries : store.entries} matches={groupMatches} groups={groups} totals={totals} worldCup={worldCup} theme={theme} onSaveUser={saveUser} onUpdateEntry={accountMode ? async (id, values) => { await remoteStats.updateEntry(id, values) } : store.updateEntry} onDeleteEntry={accountMode ? remoteStats.deleteEntry : store.deleteEntry} onLinkEntry={linkEntry} onTheme={setTheme} onReset={store.resetData} onLogout={() => void logout()} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} />,
+    profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? [...profileHistory.entries, ...remoteStats.entries] : store.entries} matches={accountMode ? allMatches : groupMatches} groups={groups} totals={totals} worldCup={worldCup} theme={theme} onSaveUser={saveUser} onUpdateEntry={updateProfileHistoryEntry} onDeleteEntry={deleteProfileHistoryEntry} onLinkEntry={linkEntry} onTheme={setTheme} onReset={store.resetData} onLogout={() => void logout()} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} historyEntries={accountMode ? profileHistory.entries : store.entries.filter(entry => entry.userId === currentUser.id)} historyTotal={accountMode ? profileHistory.total : undefined} historyPage={accountMode ? profileHistory.page : undefined} historyPageSize={profileHistory.pageSize} historyLoading={accountMode && profileHistory.loading} historyError={accountMode ? profileHistory.error : ''} onHistoryPageChange={accountMode ? profileHistory.setPage : undefined} />,
     groups: <GroupsPage groups={accountMode ? remoteGroups.groups : groups} currentGroup={accountMode ? remoteGroups.activeSharedGroup : group} members={accountMode ? remoteGroups.members : localMembers} currentUserId={accountMode ? auth.user!.id : currentUser.id} remoteMode={accountMode} loading={accountMode && remoteGroups.loading} membersLoading={accountMode && remoteGroups.membersLoading} loadError={accountMode ? groupInviteError || remoteGroups.error : ''} onSelectGroup={selectGroup} onCreateGroup={accountMode ? remoteGroups.createGroup : store.createGroup} onJoinGroup={accountMode ? remoteGroups.joinGroup : store.joinGroup} onUpdateGroup={accountMode ? remoteGroups.updateGroup : store.updateGroup} />,
   }
 

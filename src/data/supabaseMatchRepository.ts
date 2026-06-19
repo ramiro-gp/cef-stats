@@ -23,7 +23,7 @@ interface ParticipantRow {
   id: string
   match_id: string
   user_id: string
-  team: MatchTeam
+  team: MatchTeam | null
   created_at: string
 }
 
@@ -65,6 +65,11 @@ interface CommentRow {
   updated_at: string
 }
 
+interface MatchGroupLabelRow {
+  match_id: string
+  group_name: string
+}
+
 const matchColumns = 'id,host_group_id,title,format,invite_code,scheduled_at,created_by,status,light_score,dark_score,mvp_user_id,mvp_guest_id,created_at,updated_at'
 
 function client() {
@@ -76,6 +81,8 @@ function matchError(message: string): string {
   const normalized = message.toLowerCase()
   if (normalized.includes('match_comments') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/006_add_match_comments.sql.'
   if (normalized.includes('match_mvp_votes') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/005_add_match_mvp_votes.sql.'
+  if ((normalized.includes('list_my_matches') || normalized.includes('get_match_group_labels')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/007_allow_external_match_participants.sql.'
+  if (normalized.includes('attend_match_by_invite') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/008_allow_match_participants_without_team.sql.'
   if (normalized.includes('matches') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
   if (normalized.includes('invalid match invite code')) return 'No encontramos un partido con ese código.'
   if (normalized.includes('group membership required')) return 'Necesitás pertenecer al grupo para crear un partido.'
@@ -92,20 +99,23 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
   if (!rows.length) return []
   const db = client()
   const matchIds = rows.map(row => row.id)
-  const [participantsResult, guestsResult, votesResult, commentsResult] = await Promise.all([
+  const [participantsResult, guestsResult, votesResult, commentsResult, groupLabelsResult] = await Promise.all([
     db.from('match_participants').select('id,match_id,user_id,team,created_at').in('match_id', matchIds),
     db.from('match_guests').select('id,match_id,name,avatar,team,goals,assists,created_at,updated_at').in('match_id', matchIds),
     db.from('match_mvp_votes').select('id,match_id,voter_user_id,voted_user_id,voted_guest_id,created_at,updated_at').in('match_id', matchIds),
     db.from('match_comments').select('id,match_id,user_id,body,created_at,updated_at').in('match_id', matchIds),
+    db.rpc('get_match_group_labels', { p_match_ids: matchIds }),
   ])
   if (participantsResult.error) throw new Error(matchError(participantsResult.error.message))
   if (guestsResult.error) throw new Error(matchError(guestsResult.error.message))
   if (votesResult.error) throw new Error(matchError(votesResult.error.message))
   if (commentsResult.error) throw new Error(matchError(commentsResult.error.message))
+  if (groupLabelsResult.error) throw new Error(matchError(groupLabelsResult.error.message))
   const participantRows = participantsResult.data as ParticipantRow[]
   const guestRows = guestsResult.data as GuestRow[]
   const voteRows = votesResult.data as MvpVoteRow[]
   const commentRows = commentsResult.data as CommentRow[]
+  const groupLabels = new Map((groupLabelsResult.data as MatchGroupLabelRow[]).map(item => [item.match_id, item.group_name]))
   const userIds = [...new Set(participantRows.map(row => row.user_id))]
   const profiles = new Map<string, ProfileRow>()
   if (userIds.length) {
@@ -117,7 +127,7 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
   return rows.map(row => {
     const registered: MatchParticipant[] = participantRows.filter(item => item.match_id === row.id).map(item => {
       const profile = profiles.get(item.user_id)
-      return { id: item.id, matchId: item.match_id, userId: item.user_id, type: 'registered_user', team: item.team, displayName: profile?.name, handle: profile?.handle, avatar: profile?.avatar ?? undefined, createdAt: item.created_at }
+      return { id: item.id, matchId: item.match_id, userId: item.user_id, type: 'registered_user', team: item.team ?? undefined, displayName: profile?.name, handle: profile?.handle, avatar: profile?.avatar ?? undefined, createdAt: item.created_at }
     })
     const matchGuests = guestRows.filter(item => item.match_id === row.id)
     const guests: MatchParticipant[] = matchGuests.map(item => ({ id: item.id, matchId: item.match_id, guestName: item.name, avatar: item.avatar ?? undefined, type: 'guest', team: item.team, createdAt: item.created_at }))
@@ -137,6 +147,7 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
     return {
       id: row.id,
       groupId: row.host_group_id,
+      groupName: groupLabels.get(row.id),
       title: row.title,
       format: row.format,
       scheduledAt: row.scheduled_at,
@@ -163,10 +174,16 @@ async function oneMatch(row: MatchRow): Promise<Match> {
 }
 
 export const supabaseMatchRepository = {
-  async listMatches(groupId: string): Promise<Match[]> {
+  async listGroupMatches(groupId: string): Promise<Match[]> {
     const result = await client().from('matches').select(matchColumns).eq('host_group_id', groupId).order('scheduled_at', { ascending: false })
     if (result.error) throw new Error(matchError(result.error.message))
     return hydrateMatches(result.data as MatchRow[])
+  },
+
+  async listMyMatches(): Promise<Match[]> {
+    const result = await client().rpc('list_my_matches')
+    if (result.error) throw new Error(matchError(result.error.message))
+    return hydrateMatches((result.data ?? []) as MatchRow[])
   },
 
   async getMatch(matchId: string): Promise<Match> {
@@ -182,6 +199,14 @@ export const supabaseMatchRepository = {
     if (result.error) throw new Error(matchError(result.error.message))
     const row = (Array.isArray(result.data) ? result.data[0] : result.data) as MatchRow | undefined
     return row ? oneMatch(row) : null
+  },
+
+  async attendByInvite(value: string): Promise<Match | null> {
+    const code = extractInviteCode(value)
+    if (!code) return null
+    const result = await client().rpc('attend_match_by_invite', { p_invite_code: code })
+    if (result.error) throw new Error(matchError(result.error.message))
+    return result.data ? this.getMatch(result.data as string) : null
   },
 
   async createMatch(groupId: string, values: { title: string; scheduledAt: string; format?: MatchFormat }): Promise<Match> {

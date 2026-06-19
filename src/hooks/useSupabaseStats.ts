@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabaseRepository, type StatEntryInput, type StatScope } from '../data/supabaseRepository'
 import type { Group, StatEntry } from '../types'
-import { isPersonalScope } from '../utils/scopes'
+import { isAllScope, isPersonalScope } from '../utils/scopes'
 
-export function useSupabaseStats(userId: string | null, activeScope: Group | null) {
+export function useSupabaseStats(userId: string | null, activeScope: Group | null, groupIds: string[] = []) {
   const [entryState, setEntryState] = useState<{ scopeKey: string; entries: StatEntry[] }>({ scopeKey: 'none', entries: [] })
   const [loadingScopeKey, setLoadingScopeKey] = useState<string | null>(userId ? 'initial' : null)
   const [saving, setSaving] = useState(false)
@@ -11,9 +11,11 @@ export function useSupabaseStats(userId: string | null, activeScope: Group | nul
   const requestId = useRef(0)
   const scope = useMemo<StatScope | null>(() => {
     if (!userId || !activeScope) return null
-    return isPersonalScope(activeScope) ? { type: 'personal', userId } : { type: 'group', userId, groupId: activeScope.id }
-  }, [activeScope, userId])
-  const scopeKey = scope ? `${scope.type}:${scope.type === 'group' ? scope.groupId : scope.userId}` : 'none'
+    if (isPersonalScope(activeScope)) return { type: 'personal', userId }
+    if (isAllScope(activeScope)) return { type: 'all', userId, groupIds }
+    return { type: 'group', userId, groupId: activeScope.id }
+  }, [activeScope, groupIds, userId])
+  const scopeKey = scope ? `${scope.type}:${scope.type === 'group' ? scope.groupId : scope.type === 'all' ? scope.groupIds.join(',') : scope.userId}` : 'none'
   const entries = entryState.scopeKey === scopeKey ? entryState.entries : []
   const loading = loadingScopeKey === scopeKey || loadingScopeKey === 'initial'
   const error = errorState.scopeKey === scopeKey ? errorState.message : ''

@@ -19,17 +19,19 @@ export function MatchJoinSheet({ matches, remoteMode = false, initialValue = '',
   const [error, setError] = useState('')
   const initialSearchStarted = useRef(false)
   const performSearch = useCallback(async (value: string) => {
-    if (!value.trim()) return
+    if (!value.trim()) return null
     setStatus('searching')
     setError('')
     try {
       const found = onLookup ? await onLookup(value) : findMatchByCode(matches, value)
       setMatch(found)
       setStatus(found ? 'found' : 'not_found')
+      return found
     } catch (reason) {
       setMatch(null)
       setStatus('not_found')
       setError(reason instanceof Error ? reason.message : 'No pudimos buscar el partido.')
+      return null
     }
   }, [matches, onLookup])
   const search = () => performSearch(query)
@@ -37,9 +39,9 @@ export function MatchJoinSheet({ matches, remoteMode = false, initialValue = '',
   useEffect(() => {
     if (initialValue && !initialSearchStarted.current) {
       initialSearchStarted.current = true
-      void Promise.resolve().then(() => performSearch(initialValue))
+      void Promise.resolve().then(() => performSearch(initialValue)).then(found => { if (found) onOpen(found) })
     }
-  }, [initialValue, performSearch])
+  }, [initialValue, onOpen, performSearch])
 
   return <ModalSheet title="Unirme con código" onClose={onClose}>
     <label className="text-xs font-bold text-slate-500">Código o link del partido</label>

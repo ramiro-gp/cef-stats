@@ -43,7 +43,7 @@ interface StatEntryRow {
   updated_at: string
 }
 
-export type StatScope = { type: 'personal'; userId: string } | { type: 'group'; userId: string; groupId: string }
+export type StatScope = { type: 'personal'; userId: string } | { type: 'group'; userId: string; groupId: string } | { type: 'all'; userId: string; groupIds: string[] }
 export type StatEntryInput = Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team'> & { playedAt?: string }
 
 const activeGroupStorage = createStringStorageAdapter('cef-stats-active-supabase-group')
@@ -70,7 +70,7 @@ function statError(message: string): string {
   const normalized = message.toLowerCase()
   if (normalized.includes('match_id') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
   if (normalized.includes('stat_entries') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/002_add_stat_entries.sql.'
-  if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para guardar stats en este scope. Revisá la membresía y las policies RLS.'
+  if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para guardar stats en este scope. Revisá tu membresía o participación en el partido.'
   if (normalized.includes('authentication') || normalized.includes('jwt')) return 'Tu sesión venció. Volvé a iniciar sesión.'
   return message
 }
@@ -154,23 +154,57 @@ export const supabaseRepository = {
     })
   },
 
+  async getMembersForGroups(groupIds: string[]): Promise<GroupMemberView[]> {
+    if (!groupIds.length) return []
+    const db = client()
+    const membershipsResult = await db.from('group_members').select('id,group_id,user_id,role,created_at').in('group_id', groupIds).order('created_at')
+    if (membershipsResult.error) throw new Error(groupError(membershipsResult.error.message))
+    const memberships = membershipsResult.data as MembershipRow[]
+    if (!memberships.length) return []
+    const profilesResult = await db.from('profiles').select('id,name,handle,avatar').in('id', [...new Set(memberships.map(member => member.user_id))])
+    if (profilesResult.error) throw new Error(groupError(profilesResult.error.message))
+    const profiles = new Map((profilesResult.data as ProfileRow[]).map(profile => [profile.id, profile]))
+    return memberships.map(member => {
+      const profile = profiles.get(member.user_id)
+      return { id: member.id, groupId: member.group_id, userId: member.user_id, role: member.role, joinedAt: member.created_at, name: profile?.name ?? 'Usuario', handle: profile?.handle ?? 'sin-handle', avatar: profile?.avatar ?? null }
+    })
+  },
+
   async leaveGroup(groupId: string, userId: string): Promise<void> {
     const result = await client().from('group_members').delete().eq('group_id', groupId).eq('user_id', userId)
     if (result.error) throw new Error(groupError(result.error.message))
   },
 
   async listStatEntries(scope: StatScope): Promise<StatEntry[]> {
+    if (scope.type === 'all' && !scope.groupIds.length) return []
     let query = client().from('stat_entries').select(statColumns).order('played_at', { ascending: false })
     query = scope.type === 'personal'
       ? query.eq('scope_type', 'personal').is('group_id', null).eq('user_id', scope.userId)
-      : query.eq('scope_type', 'group').eq('group_id', scope.groupId)
+      : scope.type === 'all'
+        ? query.eq('scope_type', 'group').in('group_id', scope.groupIds)
+        : query.eq('scope_type', 'group').eq('group_id', scope.groupId)
     const result = await query
     if (result.error) throw new Error(statError(result.error.message))
     return (result.data as StatEntryRow[]).map(toStatEntry)
   },
 
+  async listMatchStatEntries(matchIds: string[]): Promise<StatEntry[]> {
+    if (!matchIds.length) return []
+    const result = await client().from('stat_entries').select(statColumns).in('match_id', matchIds).order('played_at', { ascending: false })
+    if (result.error) throw new Error(statError(result.error.message))
+    return (result.data as StatEntryRow[]).map(toStatEntry)
+  },
+
+  async listUserStatEntries(userId: string, page: number, pageSize: number): Promise<{ entries: StatEntry[]; total: number }> {
+    const from = Math.max(0, page - 1) * pageSize
+    const result = await client().from('stat_entries').select(statColumns, { count: 'exact' }).eq('user_id', userId).order('played_at', { ascending: false }).range(from, from + pageSize - 1)
+    if (result.error) throw new Error(statError(result.error.message))
+    return { entries: (result.data as StatEntryRow[]).map(toStatEntry), total: result.count ?? 0 }
+  },
+
   async createStatEntry(scope: StatScope, input: StatEntryInput): Promise<StatEntry> {
     if (!scope.userId) throw new Error('Necesitás iniciar sesión para guardar stats.')
+    if (scope.type === 'all') throw new Error('Elegí un grupo específico o Mi historial para cargar stats.')
     const result = await client().from('stat_entries').insert({
       user_id: scope.userId,
       scope_type: scope.type,

@@ -1,12 +1,12 @@
 import type { Page } from '../types'
-import { CalendarIcon, HomeIcon, PlusCircleIcon, TrophyIcon, UserIcon } from './icons'
+import { CalendarIcon, HomeIcon, PlusCircleIcon, TrophyIcon, UsersIcon } from './icons'
 
 const items = [
   { page: 'home' as const, label: 'Inicio', icon: HomeIcon },
   { page: 'add' as const, label: 'Cargar', icon: PlusCircleIcon },
   { page: 'matches' as const, label: 'Partidos', icon: CalendarIcon },
   { page: 'rankings' as const, label: 'Rankings', icon: TrophyIcon },
-  { page: 'profile' as const, label: 'Perfil', icon: UserIcon },
+  { page: 'groups' as const, label: 'Grupos', icon: UsersIcon },
 ]
 
 export function BottomNav({ page, onNavigate }: { page: Page | null; onNavigate: (page: Page) => void }) {

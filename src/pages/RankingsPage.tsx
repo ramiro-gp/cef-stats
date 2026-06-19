@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MedalIcon } from '../components/icons'
 import { PageTitle } from '../components/PageTitle'
 import type { Group, RankingPlayer, RankingTab } from '../types'
-import { isPersonalScope } from '../utils/scopes'
+import { isAllScope, isPersonalScope } from '../utils/scopes'
 import { sortRankings } from '../utils/stats'
 import { worldCupStageLabels } from '../utils/worldCup'
 
@@ -33,13 +33,14 @@ function rankingDetail(player: RankingPlayer, tab: RankingTab): string {
 export function RankingsPage({ group, players }: { group: Group; players: RankingPlayer[] }) {
   const [tab, setTab] = useState<RankingTab>('goals')
   const personalScope = isPersonalScope(group)
+  const allScope = isAllScope(group)
   const sorted = sortRankings(players, tab)
   const current = players.find(player => player.isCurrentUser)
 
-  if (!players.length) return <><PageTitle eyebrow={group.name} title={personalScope ? 'Mis números' : 'Rankings'} subtitle={personalScope ? 'Tu resumen personal aparece con la primera carga.' : 'La tabla que nadie admite mirar todos los días.'} /><div className="rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-8 text-center"><div className="text-3xl">🏆</div><p className="mt-3 font-extrabold">{personalScope ? 'Tu historial está listo' : 'Todavía no hay rankings'}</p><p className="mt-1 text-sm text-slate-400">{personalScope ? 'Cargá tu primer partido para ver acá tus goles, asistencias y balance.' : 'Los rankings se arman solos con las primeras cargas.'}</p></div></>
+  if (!players.length) return <><PageTitle eyebrow={group.name} title={personalScope ? 'Mis números' : 'Rankings'} subtitle={personalScope ? 'Tu resumen personal aparece con la primera carga.' : allScope ? 'Ranking combinado de todos tus grupos.' : 'La tabla que nadie admite mirar todos los días.'} /><div className="rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-8 text-center"><div className="text-3xl">🏆</div><p className="mt-3 font-extrabold">{personalScope ? 'Tu historial está listo' : 'Todavía no hay rankings'}</p><p className="mt-1 text-sm text-slate-400">{personalScope ? 'Cargá tu primer partido para ver acá tus goles, asistencias y balance.' : 'Los rankings se arman solos con las primeras cargas.'}</p></div></>
 
   return <>
-    <PageTitle eyebrow={group.name} title={personalScope ? 'Mis números' : 'Rankings'} subtitle={personalScope ? 'Tu rendimiento personal, sin necesidad de un grupo.' : 'La tabla que nadie admite mirar todos los días.'} />
+    <PageTitle eyebrow={group.name} title={personalScope ? 'Mis números' : 'Rankings'} subtitle={personalScope ? 'Tu rendimiento personal, sin necesidad de un grupo.' : allScope ? 'Personas únicas y stats combinadas de todos tus grupos.' : 'La tabla que nadie admite mirar todos los días.'} />
     <div className="no-scrollbar -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       {tabs.map(item => <button key={item.id} onClick={() => setTab(item.id)} className={`whitespace-nowrap rounded-full px-4 py-2.5 text-sm font-bold transition ${tab === item.id ? 'bg-emerald-500 text-ink' : 'border border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400'}`}>{item.label}</button>)}
     </div>

@@ -6,9 +6,9 @@ Este documento describe el modelo objetivo. Auth, profiles, grupos, membresías,
 
 - Implementado: cliente opcional, email/password, sesión, registro, logout, trigger de profile, edición de profile y fallback local.
 - Implementado: `groups` y `group_members` reales en modo cuenta, miembros con profiles, creación transaccional, edición, unión por código y selector persistido.
-- Implementado: scope personal virtual `personal:{userId}`; los grupos compartidos son opcionales.
+- Implementado: scope personal interno `personal:{userId}` para cargas sin grupo y scope visual agregado `all:{userId}`; ninguno crea filas en `groups`. Sólo TODOS aparece en el selector principal.
 - Implementado: `stat_entries` remotas por scope, CRUD, RLS por propietario/membresía y cálculos frontend de Perfil, rankings y Mundial Personal.
-- Implementado: `matches`, `match_participants`, `match_guests`, `match_mvp_votes` y `match_comments`, score, votación MVP, comentarios, lookup y unión por código mediante los patches 003, 005 y 006.
+- Implementado: `matches`, `match_participants`, `match_guests`, `match_mvp_votes` y `match_comments`, score, votación MVP, comentarios, lookup y asistencia externa por código mediante los patches 003, 005, 006, 007 y 008.
 - Modo local: conserva sus grupos y membresías mock sin depender de Supabase.
 - Todavía local: datos históricos del modo local y eventos derivados de feed/banner.
 - Siguiente paso: probar RLS/RPCs de partidos con dos usuarios y preparar un importador local explícito.
@@ -82,7 +82,7 @@ Esta tabla define acceso. Un usuario solo debería consultar datos de grupos a l
 - `created_at timestamptz`
 - `updated_at timestamptz`
 
-Personal exige `group_id null`; grupo exige `group_id` presente. RLS permite leer stats grupales solo a miembros y mutar únicamente las propias.
+Personal exige `group_id null`; grupo exige `group_id` presente. RLS permite leer stats grupales a miembros. Un participante externo puede leer las stats vinculadas únicamente a su partido y mutar sólo su propia carga vinculada.
 
 ### `matches` (implementada con patch 003)
 
@@ -108,11 +108,13 @@ Solo el creador modifica datos principales y score. Cada participante registrado
 - `id uuid primary key`
 - `match_id uuid references matches(id) on delete cascade`
 - `user_id uuid not null references profiles(id)`
-- `team text check (team in ('light','dark'))`
+- `team text null check (team is null or team in ('light','dark'))`
 - `created_at timestamptz`
 - `unique(match_id, user_id)`
 
-Cada usuario administra únicamente su propia participación. La RPC de invitación permite el alta inicial sin abrir inserts arbitrarios.
+Cada usuario administra únicamente su propia participación. La RPC de invitación permite el alta inicial con equipo pendiente sin abrir inserts arbitrarios; elegir un lado actualiza la misma fila.
+
+La participación es independiente de `group_members`: un usuario invitado obtiene acceso al partido, sus participantes, comentarios, votos y stats vinculadas, pero no a otros partidos ni datos privados del grupo anfitrión.
 
 ### `match_guests` (implementada con patch 003)
 

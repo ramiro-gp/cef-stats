@@ -93,6 +93,29 @@ export function buildActivityFeed(entries: StatEntry[], user: User, group: Group
   return [...generated, ...matchFeed].sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id)).concat(groupSeed)
 }
 
+export function buildAllGroupsActivityFeed(entries: StatEntry[], userNames: Record<string, string>, groupNames: Record<string, string>, matches: Match[] = []): ActivityFeedItem[] {
+  const seen = new Set<string>()
+  return [...entries]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .flatMap(entry => {
+      if (seen.has(entry.id)) return []
+      seen.add(entry.id)
+      const groupId = entry.groupId ?? 'all'
+      const linkedMatch = entry.matchId ? matches.find(match => match.id === entry.matchId) : undefined
+      const playerName = userNames[entry.userId] ?? 'Un jugador'
+      return [{
+        id: `stats-${entry.id}`,
+        groupId,
+        groupName: groupNames[groupId] ?? 'Grupo',
+        icon: entry.goals > 0 ? 'up' as const : 'info' as const,
+        category: 'stat_entry' as const,
+        important: false,
+        text: `${playerName} cargó ${entry.goals} ${entry.goals === 1 ? 'gol' : 'goles'} y ${entry.assists} ${entry.assists === 1 ? 'asistencia' : 'asistencias'}${linkedMatch ? ` en ${linkedMatch.title}` : ''}.`,
+        createdAt: entry.createdAt,
+      }]
+    })
+}
+
 export function worldCupProgress(state: PersonalWorldCupState): number {
   if (state.currentStage === 'group') return state.groupMatchesPlayed
   return { roundOf16: 4, quarterFinal: 5, semiFinal: 6, final: 7 }[state.currentStage]

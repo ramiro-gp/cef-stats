@@ -99,14 +99,54 @@ supabase/patches/006_add_match_comments.sql
 
 El patch 006 permite un comentario de hasta 240 caracteres por participante y partido. Cada usuario puede editar o borrar únicamente el propio; sólo los participantes registrados pueden leer la sección.
 
+Para habilitar participantes externos al grupo y la lista global de partidos, ejecutar:
+
+```text
+supabase/patches/007_allow_external_match_participants.sql
+```
+
+El patch 007 mantiene separados los permisos: un usuario puede unirse por código y participar de ese partido sin ingresar a `group_members`. Sólo ve los partidos donde participa o que creó, y puede cargar stats vinculadas al partido; no obtiene acceso al resto del grupo.
+
+Para separar asistencia y elección de equipo, ejecutar después:
+
+```text
+supabase/patches/008_allow_match_participants_without_team.sql
+```
+
+El patch 008 permite `match_participants.team = null`. Abrir un link válido anota al usuario como participante pendiente, sin agregarlo al grupo; elegir claro u oscuro actualiza esa misma participación.
+
+## Alcance de Partidos
+
+- `/partidos` muestra todos los partidos donde participa el usuario, aunque pertenezcan a grupos distintos, más los partidos que organizó.
+- Cada card identifica el grupo anfitrión.
+- Participar de un partido no convierte al usuario en miembro permanente del grupo.
+- Los comentarios, votos MVP y stats vinculadas siguen exigiendo participación válida en ese partido.
+
 ## Mi historial
 
-Toda cuenta autenticada tiene un scope virtual `personal:{userId}` llamado **Mi historial**. No crea una fila en `groups` y no requiere membresía. Es el scope inicial cuando no hay una selección remota válida.
+Toda cuenta autenticada conserva un scope interno `personal:{userId}`. No crea una fila en `groups` ni requiere membresía, pero ya no aparece como si fuera un grupo en el selector principal.
 
-- Permite usar Home, carga rápida, Perfil, rankings personales y Mundial Personal sin crear grupo.
-- En modo cuenta sus stats se guardan en Supabase. Los partidos online pertenecen a grupos reales.
-- El selector siempre muestra Mi historial primero y luego los grupos compartidos.
-- Los grupos son opcionales y sirven para comparar números y organizar partidos con amigos.
+- La carga rápida ofrece `Personal (sin grupo)` como contexto explícito.
+- En modo cuenta esas stats se guardan en Supabase con `scope_type = personal`.
+- El historial completo vive en `/perfil`, independientemente de la vista elegida en el header.
+- El selector principal muestra `TODOS` y luego únicamente grupos reales.
+
+## Scope TODOS
+
+`TODOS` es un scope virtual de sólo lectura que aparece primero en el selector. Combina stats y miembros de todos los grupos reales donde la cuenta es miembro, deduplica usuarios en rankings y etiqueta cada movimiento con su grupo de origen. No existe en Supabase y no permite administrar, editar ni invitar miembros.
+
+`Mi historial` ya no se presenta como grupo. La capacidad personal sigue existiendo como destino de carga y sus datos no se borran.
+
+## Ver, cargar y crear
+
+- Header: indica `Estás viendo` y controla sólo la visualización (`TODOS` o un grupo real).
+- Carga rápida: tiene un selector propio que define dónde se guarda la stat; `TODOS` nunca es un destino.
+- Crear partido: desde cualquier vista se elige un grupo real dentro del formulario.
+- `Sin grupo` para partidos no está habilitado: `matches.host_group_id` sigue siendo obligatorio y cambiarlo requiere una migración específica de schema, RLS, RPCs y vínculo de stats.
+
+## Historial en Perfil
+
+`/perfil` muestra exclusivamente las cargas del usuario autenticado, sin depender del scope activo. En modo cuenta usa paginación server-side de 20 filas mediante Supabase; en modo local pagina en memoria porque el store ya está cargado desde `localStorage`. Las cargas vinculadas muestran partido y grupo anfitrión, con acceso directo al detalle cuando está disponible.
 
 ## Probar el flujo
 
@@ -141,13 +181,13 @@ Toda cuenta autenticada tiene un scope virtual `personal:{userId}` llamado **Mi 
 
 ### Probar grupos reales
 
-1. Entrar con el usuario A y comprobar que Home abre en **Mi historial**, incluso sin grupos.
+1. Entrar con el usuario A y comprobar que Home abre en **TODOS**.
 2. Cargar una stat y verificar en Supabase `scope_type='personal'`, `group_id=null`, y que Perfil/Mundial Personal usan ese historial.
 3. Crear un grupo y verificar una fila en `groups` y otra con role `owner` en `group_members`.
 4. Copiar el código y editar el nombre.
 5. Cerrar sesión, entrar con el usuario B y unirse con el código.
 6. Verificar la segunda membresía y ambos profiles en la pantalla de miembros.
-7. Cambiar entre Mi historial y el grupo desde el header.
+7. Cambiar entre TODOS y el grupo desde el header; cargar una stat personal desde Carga rápida.
 8. Cerrar sesión y volver a entrar para comprobar que grupos y stats remotas persisten.
 
 Las stats que ya existían en `cef-stats-local-v1` no se importan automáticamente a una cuenta. Permanecen disponibles en modo local. Una futura etapa puede agregar **Importar mis stats locales** con preview y confirmación.
