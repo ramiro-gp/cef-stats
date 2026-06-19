@@ -182,6 +182,11 @@ export default function App() {
   const localMembers: GroupMemberView[] = localMemberPlayers.map((player, index) => ({ id: `mock-member-${player.id}`, groupId: group.id, userId: player.id, role: index === 0 ? 'owner' : 'member', joinedAt: '2026-06-17T00:00:00.000Z', name: player.name, handle: player.isCurrentUser ? currentUser.username : player.name.toLowerCase(), avatar: player.initials }))
   const userNames = Object.fromEntries(rankingUsers.map(user => [user.id, user.name]))
   const groupNames = Object.fromEntries(remoteGroups.groups.map(item => [item.id, item.name]))
+  const playerGroupIds = remoteGroups.allMembers.reduce<Record<string, string[]>>((result, member) => {
+    const current = result[member.userId] ?? []
+    if (!current.includes(member.groupId)) result[member.userId] = [...current, member.groupId]
+    return result
+  }, {})
   const lookupMatch = accountMode ? async (value: string) => {
     return remoteMatches.lookupMatch(value)
   } : undefined
@@ -231,7 +236,7 @@ export default function App() {
   }
 
   const pageContent = {
-    home: <HomePage user={currentUser} group={group} entries={allScope ? scopeEntries : groupEntries} matches={groupMatches} matchEvents={groupMatchEvents} totals={totals} rankings={rankings} worldCup={worldCup} onNavigate={navigate} userNames={userNames} groupNames={groupNames} />,
+    home: <HomePage user={currentUser} group={group} entries={allScope ? scopeEntries : groupEntries} matches={groupMatches} matchEvents={groupMatchEvents} totals={totals} rankings={rankings} worldCup={worldCup} onNavigate={navigate} userNames={userNames} groupNames={groupNames} playerGroupIds={playerGroupIds} />,
     add: <AddStatsPage key={group.id} onSave={saveQuickStats} onNavigate={navigate} matches={groupMatches} groups={accountMode ? remoteGroups.groups : store.groups} entries={accountMode ? scopeEntries : store.entries} user={currentUser} defaultContextId={accountMode ? remoteGroups.activeSharedGroup?.id ?? '' : group.id} personalContextId={accountMode ? remoteGroups.personalScope?.id : undefined} />,
     matches: <MatchesPage group={group} user={currentUser} matches={allMatches} entries={accountMode ? remoteMatches.entries : groupEntries} initialMatchId={matchRouteId} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} creationGroups={accountMode ? remoteGroups.groups : []} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onCloseMatch={() => routerNavigate(pagePaths.matches, { replace: true })} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? remoteMatches.saveStats : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} />,
     rankings: <RankingsPage group={group} players={rankings} />,

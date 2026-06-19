@@ -1,8 +1,8 @@
-import { getRareBannerFunnyMessage } from '../data/messages'
+import { getRareBannerFunnyMessage, getRarePaidBannerMessage } from '../data/messages'
 import type { BannerMessage, Group, Match, PersonalWorldCupState, RankingPlayer, StatEntry, User } from '../types'
 import type { UserTotals } from './stats'
 import { worldCupStageLabels } from './worldCup'
-import { isPersonalScope } from './scopes'
+import { isAllScope, isPersonalScope } from './scopes'
 
 function currentWorldCupPhrase(user: User, state: PersonalWorldCupState): string {
   if (state.currentStage !== 'group') return `${user.name} está en ${worldCupStageLabels[state.currentStage].toLowerCase()} de su Mundial Personal.`
@@ -30,7 +30,7 @@ function distribute(candidates: BannerMessage[], limit: number): string[] {
   return Array.from(new Set(selected.map(item => item.text)))
 }
 
-export function buildGroupBannerMessages(group: Group, players: RankingPlayer[], user: User, totals: UserTotals, worldCup: PersonalWorldCupState, entryCount: number, matches: Match[] = [], entries: StatEntry[] = []): string[] {
+export function buildGroupBannerMessages(group: Group, players: RankingPlayer[], user: User, totals: UserTotals, worldCup: PersonalWorldCupState, entryCount: number, matches: Match[] = [], entries: StatEntry[] = [], playerGroupIds: Record<string, string[]> = {}): string[] {
   const personalScope = isPersonalScope(group)
   if (!players.length) {
     const latestMatch = [...matches].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0]
@@ -68,6 +68,14 @@ export function buildGroupBannerMessages(group: Group, players: RankingPlayer[],
     if (loadedStats) candidates.push({ subject: latestMatch.id, type: 'stats', text: `${loadedStats} ${loadedStats === 1 ? 'jugador ya cargó' : 'jugadores ya cargaron'} stats en ${latestMatch.title}.` })
   }
   candidates.push({ subject: group.id, type: 'system', text: personalScope ? 'Mi historial guarda tus números aunque todavía no tengas grupo.' : `${group.name}: la tabla está más apretada de lo que algunos admiten.` })
+
+  const paidFunny = getRarePaidBannerMessage({
+    players,
+    seed: `${group.id}:${entryCount}:${latestMatch?.id ?? 'no-match'}:${latestMatch?.updatedAt ?? 'no-update'}`,
+    playerGroupIds,
+    requireSharedGroup: isAllScope(group),
+  })
+  if (paidFunny) candidates.splice(1, 0, { subject: 'paid-funny', type: 'funny', text: paidFunny })
 
   const funny = getRareBannerFunnyMessage({ group, players, user, totals, matches, entries, entryCount })
   if (funny) candidates.push({ subject: 'system', type: 'funny', text: funny })

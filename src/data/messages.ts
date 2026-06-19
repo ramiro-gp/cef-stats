@@ -2,6 +2,11 @@ import type { Group, Match, RankingPlayer, StatEntry, User } from '../types'
 import type { UserTotals } from '../utils/stats'
 
 export const FUNNY_BANNER_FREQUENCY_PERCENT = 5
+export const RARE_PAID_BANNER_FREQUENCY_PERCENT = 3
+
+export const rarePaidBannerTemplates = [
+  '{source} pagó $1500 para que todos sepan que {target} arrugó.',
+]
 
 export const rareFunnyMessages = [
   'La pelota pidió cambio después de esa definición.',
@@ -33,6 +38,30 @@ function stableHash(value: string): number {
     hash = Math.imul(hash, 16777619)
   }
   return hash >>> 0
+}
+
+interface RarePaidBannerContext {
+  players: RankingPlayer[]
+  seed: string
+  playerGroupIds?: Record<string, string[]>
+  requireSharedGroup?: boolean
+}
+
+export function getRarePaidBannerMessage({ players, seed, playerGroupIds = {}, requireSharedGroup = false }: RarePaidBannerContext): string | null {
+  const uniquePlayers = [...new Map(players.filter(player => player.name.trim()).map(player => [player.id, player])).values()]
+  const pairs = uniquePlayers.flatMap((source, sourceIndex) => uniquePlayers.slice(sourceIndex + 1).flatMap(target => {
+    if (!requireSharedGroup) return [[source, target] as const]
+    const sourceGroups = playerGroupIds[source.id] ?? []
+    const targetGroups = new Set(playerGroupIds[target.id] ?? [])
+    return sourceGroups.some(groupId => targetGroups.has(groupId)) ? [[source, target] as const] : []
+  }))
+  if (!pairs.length) return null
+  const hash = stableHash(`paid:${seed}`)
+  if (hash % 100 >= RARE_PAID_BANNER_FREQUENCY_PERCENT) return null
+  const pair = pairs[(hash >>> 8) % pairs.length]
+  const [first, second] = (hash & 1) === 0 ? pair : [pair[1], pair[0]]
+  const template = rarePaidBannerTemplates[(hash >>> 16) % rarePaidBannerTemplates.length]
+  return template.replace('{source}', first.name).replace('{target}', second.name)
 }
 
 export function getRareBannerFunnyMessage({ group, players, user, totals, matches, entries, entryCount }: BannerFunnyContext): string | null {

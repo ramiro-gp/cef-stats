@@ -20,9 +20,10 @@ interface Props {
   onNavigate: (page: Page) => void
   userNames?: Record<string, string>
   groupNames?: Record<string, string>
+  playerGroupIds?: Record<string, string[]>
 }
 
-export function HomePage({ user, group, entries, matches, matchEvents, totals, rankings, worldCup, onNavigate, userNames = {}, groupNames = {} }: Props) {
+export function HomePage({ user, group, entries, matches, matchEvents, totals, rankings, worldCup, onNavigate, userNames = {}, groupNames = {}, playerGroupIds = {} }: Props) {
   const personalScope = isPersonalScope(group)
   const allScope = isAllScope(group)
   const feed = allScope ? buildAllGroupsActivityFeed(entries, userNames, groupNames, matches) : buildActivityFeed(entries, user, group, matches, matchEvents)
@@ -32,7 +33,7 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
   const assistPosition = [...rankings].sort((a, b) => b.assists - a.assists).findIndex(player => player.id === user.id) + 1
   const playerAhead = [...rankings].sort((a, b) => b.goals - a.goals)[goalPosition - 2]
   const goalsToNext = playerAhead ? playerAhead.goals - totals.goals + 1 : 0
-  const tickerMessages = buildGroupBannerMessages(group, rankings, user, totals, worldCup, entries.length, matches, entries)
+  const tickerMessages = buildGroupBannerMessages(group, rankings, user, totals, worldCup, entries.length, matches, entries, playerGroupIds)
 
   return <>
     <section className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-5 text-white shadow-xl dark:border dark:border-white/5 sm:p-7">

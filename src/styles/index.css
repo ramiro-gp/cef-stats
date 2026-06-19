@@ -23,3 +23,18 @@
 }
 
 .animate-ticker-in { animation: ticker-in .35s ease-out; }
+
+@keyframes ticker-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.ticker-marquee-track {
+  animation: ticker-marquee var(--marquee-duration, 32s) linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticker-in,
+  .ticker-marquee-track { animation: none; }
+}
