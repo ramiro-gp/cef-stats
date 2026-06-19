@@ -48,6 +48,6 @@ export function MatchJoinSheet({ matches, remoteMode = false, initialValue = '',
     <p className={`mt-3 text-sm leading-6 ${status === 'found' ? 'text-emerald-500' : status === 'not_found' ? 'text-amber-500' : 'text-slate-400'}`}>
       {status === 'searching' ? 'Buscando partido...' : status === 'found' ? `Encontramos: ${match?.title}` : status === 'not_found' ? error || (remoteMode ? 'No encontramos un partido con ese código o link.' : 'No encontramos ese partido en este dispositivo. Cuando los partidos estén online, este código va a funcionar entre usuarios.') : 'Pegá el código o link de invitación.'}
     </p>
-    <div className="mt-6 grid grid-cols-2 gap-3"><button onClick={onClose} className="min-h-12 rounded-xl border border-slate-200 font-bold dark:border-white/10">Cancelar</button><button onClick={() => { if (match) { onOpen(match); onClose() } }} disabled={!match} className="min-h-12 rounded-xl bg-emerald-500 font-bold text-ink disabled:opacity-40">Abrir partido</button></div>
+    <div className="mt-6 grid grid-cols-2 gap-3"><button onClick={onClose} className="min-h-12 rounded-xl border border-slate-200 font-bold dark:border-white/10">Cancelar</button><button onClick={() => { if (match) onOpen(match) }} disabled={!match} className="min-h-12 rounded-xl bg-emerald-500 font-bold text-ink disabled:opacity-40">Abrir partido</button></div>
   </ModalSheet>
 }

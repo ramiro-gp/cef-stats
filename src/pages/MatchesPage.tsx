@@ -27,7 +27,7 @@ interface Props {
   loading?: boolean
   loadError?: string
   onLookupMatch?: (value: string) => Promise<Match | null>
-  onInviteConsumed?: () => void
+  onInviteConsumed?: (matchId?: string) => void
   onOpenMatch?: (matchId: string) => void
   onCloseMatch?: () => void
   onCreate: (values: { title: string; scheduledAt: string; format?: MatchFormat }) => Match | Promise<Match>
@@ -86,7 +86,7 @@ export function MatchesPage({ group, user, matches, entries, initialMatchId = nu
     {loading && <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando partidos...</div>}
     {!loading && (matches.length === 0 ? <div className="rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-8 text-center"><div className="text-3xl">⚽</div><p className="mt-3 font-extrabold">Todavía no hay partidos en este grupo</p><p className="mt-1 text-sm text-slate-400">{allowCreate ? 'Creá uno para organizar la próxima fecha.' : 'Ingresá un código de invitación para abrir un partido.'}</p>{allowCreate && <button onClick={() => setCreating(true)} className="mt-5 min-h-12 rounded-xl bg-emerald-500 px-5 font-bold text-ink">Crear primer partido</button>}</div> : <div className="grid gap-3 sm:grid-cols-2">{[...matches].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt)).map(match => <button key={match.id} onClick={() => { setActiveParticipant(null); openMatch(match.id) }} className="rounded-2xl border border-slate-200 bg-white p-4 text-left transition hover:border-emerald-500/40 dark:border-white/10 dark:bg-white/[0.04]"><div className="flex items-start justify-between gap-3"><div><p className="font-extrabold">{match.title}</p><p className="mt-1 text-xs capitalize text-slate-400">{formatMatchDate(match.scheduledAt)}</p></div><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${match.status === 'played' ? 'bg-violet-500/15 text-violet-500' : 'bg-emerald-500/15 text-emerald-500'}`}>{match.status === 'played' ? 'Jugado' : 'Abierto'}</span></div><div className="mt-4 flex items-center justify-between text-sm"><span className="text-slate-400">{match.format ?? 'Formato libre'} · {match.participants.length} anotados</span><span className="font-black">{match.score ? `${match.score.light}–${match.score.dark}` : 'Ver →'}</span></div></button>)}</div>)}
     {creating && <MatchCreateSheet onCreate={async values => { const match = await onCreate(values); openMatch(match.id); return match }} onClose={() => setCreating(false)} />}
-    {joiningByCode && <MatchJoinSheet matches={matches} remoteMode={remoteMode} initialValue={initialInviteCode} onLookup={onLookupMatch} onOpen={match => { onInviteConsumed?.(); openMatch(match.id) }} onClose={() => setJoiningByCode(false)} />}
+    {joiningByCode && <MatchJoinSheet matches={matches} remoteMode={remoteMode} initialValue={initialInviteCode} onLookup={onLookupMatch} onOpen={match => { setJoiningByCode(false); if (onInviteConsumed) onInviteConsumed(match.id); else openMatch(match.id) }} onClose={() => { setJoiningByCode(false); onInviteConsumed?.() }} />}
   </>
 
   const myParticipant = selected.participants.find(participant => participant.userId === user.id)

@@ -21,7 +21,7 @@ import { useSupabaseStats } from './hooks/useSupabaseStats'
 import { isPersonalScope } from './utils/scopes'
 import { extractGroupInviteCode } from './utils/groups'
 import { groupInviteIntentRepository } from './data/groupInviteIntentRepository'
-import { extractInviteCode, isTeamFull } from './utils/matches'
+import { extractInviteCode, isTeamFull, isValidMatchCode } from './utils/matches'
 import { useSupabaseMatches } from './hooks/useSupabaseMatches'
 import { matchInviteIntentRepository } from './data/matchInviteIntentRepository'
 import { AuthSplash } from './components/AuthSplash'
@@ -41,7 +41,12 @@ function initialGroupInviteCode(): string {
 
 function initialMatchInviteCode(): string {
   if (typeof window === 'undefined') return matchInviteIntentRepository.load() ?? ''
-  return extractInviteCode(window.location.href) || matchInviteIntentRepository.load() || ''
+  const explicitCode = extractInviteCode(window.location.href)
+  if (explicitCode) return explicitCode
+  const storedCode = matchInviteIntentRepository.load() ?? ''
+  if (isValidMatchCode(storedCode)) return extractInviteCode(storedCode)
+  if (storedCode) matchInviteIntentRepository.clear()
+  return ''
 }
 
 export default function App() {
@@ -171,9 +176,13 @@ export default function App() {
     }
     return found
   } : undefined
-  const consumeMatchInvite = () => {
+  const consumeMatchInvite = (matchId?: string) => {
     matchInviteIntentRepository.clear()
     setPendingMatchCode('')
+    const search = new URLSearchParams(location.search)
+    search.delete('match')
+    search.delete('code')
+    routerNavigate({ pathname: matchId ? `${pagePaths.matches}/${matchId}` : location.pathname, search: search.toString() ? `?${search}` : '' }, { replace: true })
   }
   const linkEntry = accountMode ? async (entryId: string, matchId: string, team: 'light' | 'dark', result?: 'win' | 'draw' | 'loss') => {
     const entry = remoteStats.entries.find(item => item.id === entryId && item.userId === currentUser.id)

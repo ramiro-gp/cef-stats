@@ -75,10 +75,16 @@ export function extractInviteCode(value: string): string {
   try {
     const url = new URL(trimmed)
     const queryCode = url.searchParams.get('match') ?? url.searchParams.get('code')
-    if (queryCode) return queryCode.toUpperCase()
-    return url.pathname.split('/').filter(Boolean).at(-1)?.toUpperCase() ?? ''
+    if (queryCode) return queryCode.trim().toUpperCase()
+    const pathMatch = url.pathname.match(/\/match\/([^/?#]+)/i)
+    return pathMatch ? decodeURIComponent(pathMatch[1]).trim().toUpperCase() : ''
   } catch {
-    return trimmed.replace(/^.*\/match\//i, '').split(/[?#/]/)[0].toUpperCase()
+    const queryMatch = trimmed.match(/[?&](?:match|code)=([^&#]+)/i)
+    if (queryMatch) return decodeURIComponent(queryMatch[1]).trim().toUpperCase()
+    const pathMatch = trimmed.match(/(?:^|\/)match\/([^/?#]+)/i)
+    if (pathMatch) return decodeURIComponent(pathMatch[1]).trim().toUpperCase()
+    if (trimmed.includes('/') || trimmed.startsWith('?')) return ''
+    return trimmed.toUpperCase()
   }
 }
 
