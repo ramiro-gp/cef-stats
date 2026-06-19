@@ -27,6 +27,39 @@ export function getParticipantAvatar(participant: MatchParticipant, user: User):
   return avatar?.trim() || identityInitials(getParticipantName(participant, user), getParticipantHandle(participant, user))
 }
 
+export interface MatchMvpSummary {
+  status: 'none' | 'winner' | 'tie'
+  leaderParticipantIds: string[]
+  counts: Record<string, number>
+  totalVotes: number
+  myVoteParticipantId?: string
+}
+
+export function getMatchMvpSummary(match: Match, userId?: string): MatchMvpSummary {
+  if (!match.mvpVotes) {
+    return {
+      status: match.mvpParticipantId ? 'winner' : 'none',
+      leaderParticipantIds: match.mvpParticipantId ? [match.mvpParticipantId] : [],
+      counts: {},
+      totalVotes: 0,
+    }
+  }
+
+  const counts = match.mvpVotes.reduce<Record<string, number>>((result, vote) => {
+    result[vote.participantId] = (result[vote.participantId] ?? 0) + 1
+    return result
+  }, {})
+  const highest = Math.max(0, ...Object.values(counts))
+  const leaderParticipantIds = highest ? Object.keys(counts).filter(participantId => counts[participantId] === highest) : []
+  return {
+    status: leaderParticipantIds.length > 1 ? 'tie' : leaderParticipantIds.length === 1 ? 'winner' : 'none',
+    leaderParticipantIds,
+    counts,
+    totalVotes: match.mvpVotes.length,
+    myVoteParticipantId: userId ? match.mvpVotes.find(vote => vote.voterUserId === userId)?.participantId : undefined,
+  }
+}
+
 export function getMaxTeamSize(format: MatchFormat = 'F5'): number {
   return BASE_TEAM_SIZE[format] + 2
 }

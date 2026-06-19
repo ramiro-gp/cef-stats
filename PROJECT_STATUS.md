@@ -4,7 +4,7 @@
 
 CEF Stats es un prototipo React + Vite + TypeScript + Tailwind, mobile first, con dark mode predeterminado. En modo cuenta usa Supabase Auth, perfiles, grupos, stats, partidos, participantes e invitados. El modo local conserva su store de `localStorage`.
 
-Incluye perfil y handle editables, grupos locales, grupo activo, carga rápida, rankings, feed, banner, Mundial Personal, partidos, equipos, cupos, invitados, vinculación por código/link, score, MVP, stats de invitados y cancha visual.
+Incluye perfil y handle editables, grupos locales, grupo activo, carga rápida, rankings, feed, banner, Mundial Personal, partidos, equipos, cupos, invitados, vinculación por código/link, score, votos MVP, comentarios cortos, stats de invitados y cancha visual.
 
 Las cuentas autenticadas siempre disponen de **Mi historial**, un scope virtual `personal:{userId}` que existe solo en el frontend/localStorage y permite usar toda la experiencia individual sin pertenecer a grupos. Los grupos reales son opcionales y se reservan para comparar con amigos.
 
@@ -14,7 +14,7 @@ Las cuentas autenticadas siempre disponen de **Mi historial**, un scope virtual 
 - Deploy objetivo: Vercel, con configuración explícita en `vercel.json` y pasos en `DEPLOY.md`.
 - Variables requeridas: `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 - La navegación actual vive en estado React sobre `/`; no hay rutas client-side que requieran rewrites.
-- Supabase remoto: Auth, profiles, grupos, membresías, stats, partidos, participantes, invitados, score y MVP.
+- Supabase remoto: Auth, profiles, grupos, membresías, stats, partidos, participantes, invitados, score, votos MVP y comentarios.
 - `localStorage`: preferencias, compatibilidad histórica y todo el dominio del modo local interno.
 - Los links de grupos y partidos usan el dominio actual y conservan la intención durante login.
 - La UI muestra la versión de `package.json` en desktop y mobile para identificar cada deploy.
@@ -60,7 +60,7 @@ Supabase Auth/API                ↓
 - Los rankings mock y contadores históricos no representan miembros reales completos.
 - `GroupMember` ya existe y se migra para el usuario local, pero los miembros mock restantes no se inventan.
 - El Mundial Personal continúa calculándose en frontend y no fue modificado.
-- El usuario autenticado aporta nombre, handle y avatar; nickname y posición siguen locales.
+- El usuario autenticado aporta nombre, handle, avatar y posición; nickname sigue local.
 - Las tablas remotas de grupos están conectadas a la UI solo en modo cuenta.
 - Stats y partidos autenticados se leen y escriben en Supabase; feed/banner siguen como proyecciones frontend.
 - Mi historial usa su propio ID local y es el fallback personal-first cuando no hay grupos.
@@ -95,6 +95,6 @@ pnpm lint
 
 ## Próximo paso recomendado
 
-Ejecutar `supabase/patches/003_add_matches.sql` y validar con dos usuarios reales. Después conviene automatizar pruebas de RLS/RPCs y diseñar una importación explícita de datos locales históricos.
+Ejecutar `supabase/patches/006_add_match_comments.sql` antes de desplegar esta versión. Después conviene automatizar pruebas de RLS/RPCs y diseñar una importación explícita de datos locales históricos.
 
 Para corregir instalaciones existentes con el error de `gen_random_bytes`, ejecutar `supabase/patches/001_fix_invite_code_generation.sql` desde SQL Editor.

@@ -43,7 +43,7 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
   const profileTitle = user.nickname && user.nickname !== user.name ? `${user.name} “${user.nickname}”` : user.name
 
   return <>
-    <div className="mb-6 flex items-start justify-between gap-3"><PageTitle eyebrow="Mi perfil" title={profileTitle} subtitle={`${user.position} · ${group.name}`} /><button onClick={() => setSettingsOpen(true)} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">Ajustes</button></div>
+    <div className="mb-6 flex items-start justify-between gap-3"><PageTitle eyebrow="Mi perfil" title={profileTitle} subtitle={`${user.position || 'Sin posición'} · ${group.name}`} /><button onClick={() => setSettingsOpen(true)} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">Ajustes</button></div>
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       <div className="space-y-4">
         <section className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-6 text-white">

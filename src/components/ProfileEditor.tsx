@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { User } from '../types'
+import type { PlayerPosition, User } from '../types'
 import { reservedMockHandles } from '../data/seedData'
 import { isValidHandle, normalizeHandle } from '../utils/identity'
 import { ModalSheet } from './ModalSheet'
@@ -9,6 +9,7 @@ export function ProfileEditor({ user, onSave, onClose }: { user: User; onSave: (
   const [nickname, setNickname] = useState(user.nickname)
   const [avatar, setAvatar] = useState(user.avatar || user.initials)
   const [username, setUsername] = useState(user.username.replace(/^@/, ''))
+  const [position, setPosition] = useState<PlayerPosition | ''>(user.position)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -19,7 +20,7 @@ export function ProfileEditor({ user, onSave, onClose }: { user: User; onSave: (
     if (reservedMockHandles.includes(cleanUsername) && cleanUsername !== normalizeHandle(user.username)) { setError('Ese @usuario ya está usado en este prototipo.'); return }
     const fallbackInitials = name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
     setSaving(true)
-    const saveError = await onSave({ ...user, name: name.trim(), nickname: nickname.trim(), username: cleanUsername, avatar: avatar.trim() || fallbackInitials, initials: fallbackInitials })
+    const saveError = await onSave({ ...user, name: name.trim(), nickname: nickname.trim(), username: cleanUsername, avatar: avatar.trim() || fallbackInitials, initials: fallbackInitials, position })
     setSaving(false)
     if (saveError) { setError(saveError); return }
     onClose()
@@ -32,6 +33,7 @@ export function ProfileEditor({ user, onSave, onClose }: { user: User; onSave: (
       <label className="block"><span className="text-xs font-bold text-slate-500">Apodo opcional</span><input value={nickname} onChange={event => setNickname(event.target.value)} placeholder="Podés configurarlo después" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
       <label className="block"><span className="text-xs font-bold text-slate-500">@usuario</span><div className="relative mt-2"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">@</span><input value={username} maxLength={24} onChange={event => setUsername(event.target.value.toLowerCase().replace(/\s/g, '').replace(/[^a-z0-9._]/g, ''))} className="h-12 w-full rounded-xl border border-slate-200 bg-transparent pl-8 pr-3 outline-none focus:border-emerald-500 dark:border-white/10" /></div></label>
       <label className="block"><span className="text-xs font-bold text-slate-500">Avatar</span><input value={avatar} maxLength={4} onChange={event => setAvatar(event.target.value)} placeholder="RA o ⚽" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
+      <label className="block"><span className="text-xs font-bold text-slate-500">Posición</span><select value={position} onChange={event => setPosition(event.target.value as PlayerPosition | '')} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Sin posición</option><option value="Arquero">Arquero</option><option value="Defensor">Defensor</option><option value="Mediocampista">Mediocampista</option><option value="Delantero">Delantero</option></select></label>
     </div>
     {error && <p className="mt-3 text-sm font-semibold text-rose-500">{error}</p>}
     <div className="mt-6 grid grid-cols-2 gap-3"><button onClick={onClose} disabled={saving} className="min-h-12 rounded-xl border border-slate-200 font-bold disabled:opacity-50 dark:border-white/10">Cancelar</button><button onClick={save} disabled={saving} className="min-h-12 rounded-xl bg-emerald-500 font-extrabold text-ink disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button></div>

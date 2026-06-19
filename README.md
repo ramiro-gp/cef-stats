@@ -73,6 +73,30 @@ supabase/patches/003_add_matches.sql
 
 El patch 003 crea partidos, participantes e invitados, agrega `stat_entries.match_id` y configura RLS/RPCs para crear, buscar y unirse mediante código.
 
+Para guardar la posición elegida en Perfil, ejecutar también:
+
+```text
+supabase/patches/004_add_profile_position.sql
+```
+
+El patch 004 agrega `profiles.position` como dato opcional y restringe sus valores a Arquero, Defensor, Mediocampista o Delantero. Los perfiles existentes quedan sin posición hasta que el usuario elija una.
+
+Para habilitar la votación de MVP por participante, ejecutar:
+
+```text
+supabase/patches/005_add_match_mvp_votes.sql
+```
+
+El patch 005 crea un voto único por usuario y partido, permite cambiarlo y aplica RLS para que sólo participantes registrados puedan votar. El ganador se calcula por mayoría y los empates se muestran sin desempate artificial.
+
+Para habilitar comentarios cortos dentro de cada partido, ejecutar:
+
+```text
+supabase/patches/006_add_match_comments.sql
+```
+
+El patch 006 permite un comentario de hasta 240 caracteres por participante y partido. Cada usuario puede editar o borrar únicamente el propio; sólo los participantes registrados pueden leer la sección.
+
 ## Mi historial
 
 Toda cuenta autenticada tiene un scope virtual `personal:{userId}` llamado **Mi historial**. No crea una fila en `groups` y no requiere membresía. Es el scope inicial cuando no hay una selección remota válida.
@@ -136,7 +160,7 @@ Con una cuenta, los partidos se sincronizan mediante Supabase. Los miembros del 
 4. Cargar el resultado con botones `−` y `+`. Se puede editar guardándolo nuevamente.
 5. Pulsar **Cargar mis números para este partido**. Si hay equipo y resultado, Gané/Empaté/Perdí se calcula automáticamente; en otro caso se elige manualmente.
 6. Volver a abrir el botón para editar la carga existente. El store evita una segunda carga del mismo usuario para ese partido.
-7. Seleccionar un MVP entre los participantes y revisar el resumen, totales por equipo y advertencias de goles faltantes.
+7. Con cada cuenta participante, votar un MVP y revisar mayoría/empate, resumen, totales por equipo y advertencias de goles faltantes.
 8. Cambiar el grupo activo: la lista de partidos, sus eventos y stats quedan aislados por `groupId`.
 9. Volver a Home para comprobar eventos de creación, equipo, resultado, MVP y stats en feed/banner.
 
@@ -186,7 +210,7 @@ En cualquier eliminatoria, ganar hace avanzar, empatar conserva exactamente la m
 - `src/data/localStorageAdapter.ts`: único acceso directo a `localStorage`.
 - `src/data/authRepository.ts`: operaciones de sesión y profile de Supabase.
 - `src/data/supabaseRepository.ts`: grupos, miembros, stats y preferencia local del grupo remoto activo.
-- `src/data/supabaseMatchRepository.ts`: partidos, participantes, invitados, score y MVP remotos.
+- `src/data/supabaseMatchRepository.ts`: partidos, participantes, invitados, score, votos MVP y comentarios remotos.
 - `src/lib/supabaseClient.ts`: cliente opcional y detección segura de variables faltantes.
 - `src/hooks/useAuth.ts`: sesión, profile y actualización reactiva de Auth.
 - `src/hooks/useSupabaseGroups.ts`: carga, selección y mutaciones de grupos reales.
@@ -201,7 +225,7 @@ En cualquier eliminatoria, ganar hace avanzar, empatar conserva exactamente la m
 - `src/components/ProfileEditor.tsx`: edición local de nombre, apodo y avatar.
 - `src/components/StatEntryEditor.tsx`: edición y borrado confirmado de cargas.
 - `src/components/SettingsSheet.tsx`: tema, mensajes funny, versión y reset local.
-- `src/pages/MatchesPage.tsx`: lista, detalle, equipos, score, resumen y MVP manual.
+- `src/pages/MatchesPage.tsx`: lista, detalle, equipos, score, resumen, votación de MVP y comentarios.
 - `src/components/MatchCreateSheet.tsx`: creación híbrida de partidos.
 - `src/components/MatchStatsSheet.tsx`: carga o edición única de stats vinculadas.
 - `src/utils/matches.ts`: cálculo puro del resultado según equipo y totales cargados.

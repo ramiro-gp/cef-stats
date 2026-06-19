@@ -8,7 +8,7 @@ Este documento describe el modelo objetivo. Auth, profiles, grupos, membresías,
 - Implementado: `groups` y `group_members` reales en modo cuenta, miembros con profiles, creación transaccional, edición, unión por código y selector persistido.
 - Implementado: scope personal virtual `personal:{userId}`; los grupos compartidos son opcionales.
 - Implementado: `stat_entries` remotas por scope, CRUD, RLS por propietario/membresía y cálculos frontend de Perfil, rankings y Mundial Personal.
-- Implementado: `matches`, `match_participants` y `match_guests`, score/MVP, lookup y unión por código mediante el patch 003.
+- Implementado: `matches`, `match_participants`, `match_guests`, `match_mvp_votes` y `match_comments`, score, votación MVP, comentarios, lookup y unión por código mediante los patches 003, 005 y 006.
 - Modo local: conserva sus grupos y membresías mock sin depender de Supabase.
 - Todavía local: datos históricos del modo local y eventos derivados de feed/banner.
 - Siguiente paso: probar RLS/RPCs de partidos con dos usuarios y preparar un importador local explícito.
@@ -101,7 +101,7 @@ Personal exige `group_id null`; grupo exige `group_id` presente. RLS permite lee
 - `created_at timestamptz`
 - `updated_at timestamptz`
 
-Solo el creador modifica datos principales, score y MVP. El lookup por código y la unión usan RPCs acotadas.
+Solo el creador modifica datos principales y score. Cada participante registrado administra su propio voto MVP. El lookup por código y la unión usan RPCs acotadas.
 
 ### `match_participants`
 
@@ -145,11 +145,11 @@ Guardar eventos relevantes (partido creado, equipo, salida, score, MVP, invitado
 
 - Un perfil pertenece a un usuario autenticado.
 - Un grupo tiene muchos miembros, partidos, cargas y eventos.
-- Un partido pertenece a un grupo y tiene participantes, score, MVP, stats de invitados y eventos.
+- Un partido pertenece a un grupo y tiene participantes, score, votos MVP, stats de invitados y eventos.
 - Una carga pertenece al usuario y al grupo; opcionalmente a un partido.
 - Un invitado existe únicamente dentro de un partido.
 
-RLS debería partir de `group_members`: lectura para miembros del grupo; escritura según actor y rol. El usuario modifica sus propias cargas. El creador/administrador del partido administra score, MVP e invitados. Nunca confiar solamente en filtros del frontend.
+RLS debería partir de `group_members`: lectura para miembros del grupo; escritura según actor y rol. El usuario modifica sus propias cargas y su propio voto MVP. El creador/administrador del partido administra score e invitados. Nunca confiar solamente en filtros del frontend.
 
 ## Datos calculables en frontend
 

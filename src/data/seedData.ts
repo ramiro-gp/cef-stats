@@ -7,7 +7,7 @@ export const defaultUser: User = {
   username: 'rami10',
   initials: 'RA',
   avatar: 'RA',
-  position: 'Delantero',
+  position: '',
 }
 
 export const defaultGroup: Group = {

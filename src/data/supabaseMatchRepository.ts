@@ -1,5 +1,5 @@
 import { supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
-import type { Match, MatchFormat, MatchParticipant, MatchScore, MatchTeam } from '../types'
+import type { Match, MatchComment, MatchFormat, MatchMvpVote, MatchParticipant, MatchScore, MatchTeam } from '../types'
 import { extractInviteCode } from '../utils/matches'
 
 interface MatchRow {
@@ -46,6 +46,25 @@ interface ProfileRow {
   avatar: string | null
 }
 
+interface MvpVoteRow {
+  id: string
+  match_id: string
+  voter_user_id: string
+  voted_user_id: string | null
+  voted_guest_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface CommentRow {
+  id: string
+  match_id: string
+  user_id: string
+  body: string
+  created_at: string
+  updated_at: string
+}
+
 const matchColumns = 'id,host_group_id,title,format,invite_code,scheduled_at,created_by,status,light_score,dark_score,mvp_user_id,mvp_guest_id,created_at,updated_at'
 
 function client() {
@@ -55,9 +74,15 @@ function client() {
 
 function matchError(message: string): string {
   const normalized = message.toLowerCase()
+  if (normalized.includes('match_comments') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/006_add_match_comments.sql.'
+  if (normalized.includes('match_mvp_votes') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/005_add_match_mvp_votes.sql.'
   if (normalized.includes('matches') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
   if (normalized.includes('invalid match invite code')) return 'No encontramos un partido con ese código.'
   if (normalized.includes('group membership required')) return 'Necesitás pertenecer al grupo para crear un partido.'
+  if (normalized.includes('mvp voter must participate')) return 'Tenés que participar del partido para votar al MVP.'
+  if (normalized.includes('mvp user must participate') || normalized.includes('mvp guest must belong')) return 'Sólo podés votar a participantes de este partido.'
+  if (normalized.includes('comment author must participate')) return 'Tenés que participar del partido para comentar.'
+  if (normalized.includes('match_comments_body_check')) return 'El comentario debe tener entre 1 y 240 caracteres.'
   if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para realizar esta acción en el partido.'
   if (normalized.includes('duplicate') || normalized.includes('stat_entries_user_match_unique')) return 'Ya existe una carga tuya vinculada a este partido.'
   return message
@@ -67,14 +92,20 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
   if (!rows.length) return []
   const db = client()
   const matchIds = rows.map(row => row.id)
-  const [participantsResult, guestsResult] = await Promise.all([
+  const [participantsResult, guestsResult, votesResult, commentsResult] = await Promise.all([
     db.from('match_participants').select('id,match_id,user_id,team,created_at').in('match_id', matchIds),
     db.from('match_guests').select('id,match_id,name,avatar,team,goals,assists,created_at,updated_at').in('match_id', matchIds),
+    db.from('match_mvp_votes').select('id,match_id,voter_user_id,voted_user_id,voted_guest_id,created_at,updated_at').in('match_id', matchIds),
+    db.from('match_comments').select('id,match_id,user_id,body,created_at,updated_at').in('match_id', matchIds),
   ])
   if (participantsResult.error) throw new Error(matchError(participantsResult.error.message))
   if (guestsResult.error) throw new Error(matchError(guestsResult.error.message))
+  if (votesResult.error) throw new Error(matchError(votesResult.error.message))
+  if (commentsResult.error) throw new Error(matchError(commentsResult.error.message))
   const participantRows = participantsResult.data as ParticipantRow[]
   const guestRows = guestsResult.data as GuestRow[]
+  const voteRows = votesResult.data as MvpVoteRow[]
+  const commentRows = commentsResult.data as CommentRow[]
   const userIds = [...new Set(participantRows.map(row => row.user_id))]
   const profiles = new Map<string, ProfileRow>()
   if (userIds.length) {
@@ -90,7 +121,19 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
     })
     const matchGuests = guestRows.filter(item => item.match_id === row.id)
     const guests: MatchParticipant[] = matchGuests.map(item => ({ id: item.id, matchId: item.match_id, guestName: item.name, avatar: item.avatar ?? undefined, type: 'guest', team: item.team, createdAt: item.created_at }))
-    const mvpParticipantId = row.mvp_guest_id ?? registered.find(item => item.userId === row.mvp_user_id)?.id
+    const mvpVotes: MatchMvpVote[] = voteRows.filter(item => item.match_id === row.id).flatMap(item => {
+      const participantId = item.voted_guest_id ?? registered.find(participant => participant.userId === item.voted_user_id)?.id
+      return participantId ? [{ id: item.id, matchId: item.match_id, voterUserId: item.voter_user_id, participantId, createdAt: item.created_at, updatedAt: item.updated_at }] : []
+    })
+    const voteCounts = mvpVotes.reduce<Record<string, number>>((counts, vote) => ({ ...counts, [vote.participantId]: (counts[vote.participantId] ?? 0) + 1 }), {})
+    const highestVoteCount = Math.max(0, ...Object.values(voteCounts))
+    const leaders = highestVoteCount ? Object.keys(voteCounts).filter(participantId => voteCounts[participantId] === highestVoteCount) : []
+    const mvpParticipantId = leaders.length === 1 ? leaders[0] : undefined
+    const mvpUserId = registered.find(item => item.id === mvpParticipantId)?.userId
+    const comments: MatchComment[] = commentRows.filter(item => item.match_id === row.id).flatMap(item => {
+      const profile = profiles.get(item.user_id)
+      return profile ? [{ id: item.id, matchId: item.match_id, userId: item.user_id, body: item.body, authorName: profile.name, authorHandle: profile.handle, authorAvatar: profile.avatar ?? undefined, createdAt: item.created_at, updatedAt: item.updated_at }] : []
+    })
     return {
       id: row.id,
       groupId: row.host_group_id,
@@ -102,8 +145,10 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
       status: row.status,
       participants: [...registered, ...guests],
       score: row.status === 'played' || row.light_score > 0 || row.dark_score > 0 ? { light: row.light_score, dark: row.dark_score } : undefined,
-      mvpUserId: row.mvp_user_id ?? undefined,
+      mvpUserId,
       mvpParticipantId,
+      mvpVotes,
+      comments,
       guestStats: matchGuests.map(item => ({ participantId: item.id, goals: item.goals, assists: item.assists, updatedAt: item.updated_at })),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -164,13 +209,32 @@ export const supabaseMatchRepository = {
     return oneMatch(result.data)
   },
 
-  async setMvp(matchId: string, participant: MatchParticipant): Promise<Match> {
-    const values = participant.type === 'guest'
-      ? { mvp_guest_id: participant.id, mvp_user_id: null }
-      : { mvp_guest_id: null, mvp_user_id: participant.userId ?? null }
-    const result = await client().from('matches').update(values).eq('id', matchId).select(matchColumns).single<MatchRow>()
+  async setMvp(matchId: string, participant: MatchParticipant, voterUserId: string): Promise<Match> {
+    const votedUserId = participant.type === 'registered_user' ? participant.userId ?? null : null
+    if (participant.type === 'registered_user' && !votedUserId) throw new Error('El participante elegido no tiene un usuario válido.')
+    const values = {
+      match_id: matchId,
+      voter_user_id: voterUserId,
+      voted_guest_id: participant.type === 'guest' ? participant.id : null,
+      voted_user_id: votedUserId,
+    }
+    const result = await client().from('match_mvp_votes').upsert(values, { onConflict: 'match_id,voter_user_id' }).select('id').single()
     if (result.error) throw new Error(matchError(result.error.message))
-    return oneMatch(result.data)
+    return this.getMatch(matchId)
+  },
+
+  async saveComment(matchId: string, userId: string, body: string): Promise<Match> {
+    const cleanBody = body.trim()
+    if (!cleanBody || cleanBody.length > 240) throw new Error('El comentario debe tener entre 1 y 240 caracteres.')
+    const result = await client().from('match_comments').upsert({ match_id: matchId, user_id: userId, body: cleanBody }, { onConflict: 'match_id,user_id' }).select('id').single()
+    if (result.error) throw new Error(matchError(result.error.message))
+    return this.getMatch(matchId)
+  },
+
+  async deleteComment(matchId: string, userId: string): Promise<Match> {
+    const result = await client().from('match_comments').delete().eq('match_id', matchId).eq('user_id', userId)
+    if (result.error) throw new Error(matchError(result.error.message))
+    return this.getMatch(matchId)
   },
 
   async addGuest(matchId: string, values: { name: string; avatar?: string; team: MatchTeam }): Promise<Match> {

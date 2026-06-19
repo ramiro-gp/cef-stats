@@ -11,8 +11,8 @@ const desktopItems = [
   { page: 'add' as const, label: 'Cargar stats', icon: PlusCircleIcon },
   { page: 'matches' as const, label: 'Partidos', icon: CalendarIcon },
   { page: 'rankings' as const, label: 'Rankings', icon: TrophyIcon },
-  { page: 'profile' as const, label: 'Mi perfil', icon: UserIcon },
   { page: 'groups' as const, label: 'Mis grupos', icon: UsersIcon },
+  { page: 'profile' as const, label: 'Mi perfil', icon: UserIcon },
 ]
 
 interface Props {

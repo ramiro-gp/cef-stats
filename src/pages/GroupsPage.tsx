@@ -17,10 +17,9 @@ interface Props {
   onCreateGroup: (name: string) => Group | Promise<Group>
   onJoinGroup: (code: string) => Group | Promise<Group>
   onUpdateGroup: (id: string, values: Partial<Pick<Group, 'name'>>) => void | Promise<void>
-  onExitAccount?: () => void
 }
 
-export function GroupsPage({ groups, currentGroup, members = [], currentUserId, remoteMode = false, loading = false, membersLoading = false, loadError = '', onSelectGroup, onCreateGroup, onJoinGroup, onUpdateGroup, onExitAccount }: Props) {
+export function GroupsPage({ groups, currentGroup, members = [], currentUserId, remoteMode = false, loading = false, membersLoading = false, loadError = '', onSelectGroup, onCreateGroup, onJoinGroup, onUpdateGroup }: Props) {
   const [mode, setMode] = useState<'list' | 'create' | 'join' | 'edit'>('list')
   const [value, setValue] = useState('')
   const [editing, setEditing] = useState<Group | null>(null)
@@ -82,7 +81,6 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
           <h3 className="font-extrabold">Gestionar grupos</h3><p className="mt-1 text-sm leading-6 text-slate-400">{remoteMode ? 'Membresías guardadas en Supabase.' : 'Todo queda guardado localmente.'}</p>
           <div className="mt-5 space-y-2.5"><button onClick={() => open('create')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 font-bold text-ink"><PlusCircleIcon className="h-5 w-5"/> Crear grupo {remoteMode ? '' : 'local'}</button><button onClick={() => open('join')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 font-bold dark:border-white/10"><UsersIcon className="h-5 w-5" /> Unirme con código</button></div>
           {currentGroup && <div className="mt-6 rounded-xl bg-slate-100 p-3 dark:bg-white/5"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Grupo activo</p><p className="mt-1 font-bold">{currentGroup.name}</p><p className="mt-1 font-mono text-xs text-emerald-500">{currentGroup.code}</p></div>}
-          {remoteMode && onExitAccount && <button onClick={onExitAccount} className="mt-5 min-h-11 w-full text-sm font-bold text-slate-400 hover:text-rose-500">Cerrar sesión</button>}
         </> : <>
           <button onClick={() => open('list')} disabled={submitting} className="mb-4 min-h-10 text-xs font-bold text-emerald-500 disabled:opacity-50">← Volver</button>
           <h3 className="font-extrabold">{mode === 'create' ? 'Nuevo grupo' : mode === 'join' ? 'Unirme a un grupo' : 'Editar grupo'}</h3>

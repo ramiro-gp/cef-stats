@@ -27,7 +27,7 @@ function mergeAuthProfile(profile: AuthProfile, localUser: User): User {
   const initials = profile.name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() || localUser.initials
   const storedNickname = localUser.nickname.trim()
   const nickname = storedNickname && storedNickname.toLowerCase() !== 'rami' ? storedNickname : profile.name
-  return { ...localUser, id: profile.id, name: profile.name, nickname, username: profile.handle, avatar: profile.avatar || initials, initials }
+  return { ...localUser, id: profile.id, name: profile.name, nickname, username: profile.handle, avatar: profile.avatar || initials, initials, position: profile.position ?? '' }
 }
 
 function initialGroupInviteCode(): string {
@@ -114,7 +114,7 @@ export default function App() {
 
   const saveUser = async (nextUser: User): Promise<void | string> => {
     if (accountMode) {
-      const result = await auth.updateProfile({ name: nextUser.name, handle: nextUser.username, avatar: nextUser.avatar })
+      const result = await auth.updateProfile({ name: nextUser.name, handle: nextUser.username, avatar: nextUser.avatar, position: nextUser.position || null })
       if (result.error) return result.error
     }
     store.setUser(nextUser)
@@ -178,14 +178,14 @@ export default function App() {
   const content = {
     home: <HomePage user={currentUser} group={group} entries={groupEntries} matches={groupMatches} matchEvents={groupMatchEvents} totals={totals} rankings={rankings} worldCup={worldCup} onNavigate={navigate} />,
     add: <AddStatsPage onSave={values => accountMode ? remoteStats.createEntry(values) : store.addEntry(values, group.id)} onNavigate={navigate} matches={groupMatches} groups={groups} entries={accountMode ? scopeEntries : store.entries} user={currentUser} />,
-    matches: <MatchesPage group={group} user={currentUser} matches={groupMatches} entries={accountMode ? scopeEntries : groupEntries} initialMatchId={matchToOpen} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveStats={accountMode ? async (matchId, values) => {
+    matches: <MatchesPage group={group} user={currentUser} matches={groupMatches} entries={accountMode ? scopeEntries : groupEntries} initialMatchId={matchToOpen} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? async (matchId, values) => {
       const existing = remoteStats.entries.find(entry => entry.userId === currentUser.id && entry.matchId === matchId)
       if (existing) await remoteStats.updateEntry(existing.id, values)
       else await remoteStats.createEntry({ ...values, matchId })
     } : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} />,
     rankings: <RankingsPage group={group} players={rankings} />,
     profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? groupEntries : store.entries} matches={groupMatches} groups={groups} totals={totals} worldCup={worldCup} theme={theme} onSaveUser={saveUser} onUpdateEntry={accountMode ? async (id, values) => { await remoteStats.updateEntry(id, values) } : store.updateEntry} onDeleteEntry={accountMode ? remoteStats.deleteEntry : store.deleteEntry} onLinkEntry={linkEntry} onTheme={setTheme} onReset={store.resetData} onLogout={() => void logout()} onOpenMatch={matchId => { setMatchToOpen(matchId); navigate('matches') }} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} />,
-    groups: <GroupsPage groups={accountMode ? remoteGroups.groups : groups} currentGroup={accountMode ? remoteGroups.activeSharedGroup : group} members={accountMode ? remoteGroups.members : localMembers} currentUserId={accountMode ? auth.user!.id : currentUser.id} remoteMode={accountMode} loading={accountMode && remoteGroups.loading} membersLoading={accountMode && remoteGroups.membersLoading} loadError={accountMode ? groupInviteError || remoteGroups.error : ''} onSelectGroup={selectGroup} onCreateGroup={accountMode ? remoteGroups.createGroup : store.createGroup} onJoinGroup={accountMode ? remoteGroups.joinGroup : store.joinGroup} onUpdateGroup={accountMode ? remoteGroups.updateGroup : store.updateGroup} onExitAccount={accountMode ? () => void logout() : undefined} />,
+    groups: <GroupsPage groups={accountMode ? remoteGroups.groups : groups} currentGroup={accountMode ? remoteGroups.activeSharedGroup : group} members={accountMode ? remoteGroups.members : localMembers} currentUserId={accountMode ? auth.user!.id : currentUser.id} remoteMode={accountMode} loading={accountMode && remoteGroups.loading} membersLoading={accountMode && remoteGroups.membersLoading} loadError={accountMode ? groupInviteError || remoteGroups.error : ''} onSelectGroup={selectGroup} onCreateGroup={accountMode ? remoteGroups.createGroup : store.createGroup} onJoinGroup={accountMode ? remoteGroups.joinGroup : store.joinGroup} onUpdateGroup={accountMode ? remoteGroups.updateGroup : store.updateGroup} />,
   }[page]
 
   return <AppShell page={page} user={currentUser} group={group} groups={groups} dark={dark} onTheme={() => setTheme(dark ? 'light' : 'dark')} onSelectGroup={selectGroup} onNavigate={navigate}>

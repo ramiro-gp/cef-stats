@@ -28,14 +28,20 @@ En un proyecto nuevo, ejecutar desde **SQL Editor**, en este orden:
 1. `supabase/schema.sql`
 2. `supabase/patches/002_add_stat_entries.sql`
 3. `supabase/patches/003_add_matches.sql`
+4. `supabase/patches/004_add_profile_position.sql`
+5. `supabase/patches/005_add_match_mvp_votes.sql`
+6. `supabase/patches/006_add_match_comments.sql`
 
 En una base existente, ejecutar los patches idempotentes:
 
 1. `supabase/patches/001_fix_invite_code_generation.sql`
 2. `supabase/patches/002_add_stat_entries.sql`
 3. `supabase/patches/003_add_matches.sql`
+4. `supabase/patches/004_add_profile_position.sql`
+5. `supabase/patches/005_add_match_mvp_votes.sql`
+6. `supabase/patches/006_add_match_comments.sql`
 
-El patch 001 actualiza la RPC de creación de grupos. El patch 002 crea stats y el patch 003 crea partidos online y su vínculo con stats.
+El patch 001 actualiza la RPC de creación de grupos. El patch 002 crea stats, el patch 003 crea partidos online y su vínculo con stats, el patch 004 agrega la posición opcional del perfil, el patch 005 habilita votos MVP y el patch 006 agrega comentarios por participante.
 
 Confirmar en Supabase:
 

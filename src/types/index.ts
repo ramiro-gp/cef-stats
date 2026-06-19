@@ -9,6 +9,7 @@ export type ThemeMode = 'dark' | 'light' | 'system'
 export type MatchFormat = 'F5' | 'F6' | 'F7' | 'F8' | 'F11'
 export type MatchStatus = 'open' | 'played' | 'closed'
 export type MatchTeam = 'light' | 'dark'
+export type PlayerPosition = 'Arquero' | 'Defensor' | 'Mediocampista' | 'Delantero'
 export type MatchEventType = 'created' | 'joined_team' | 'left_match' | 'score_saved' | 'mvp_selected' | 'guest_added' | 'guest_removed' | 'guest_stats' | 'stats_linked'
 export type MatchParticipantType = 'registered_user' | 'guest'
 export type GroupMemberRole = 'owner' | 'admin' | 'member'
@@ -22,7 +23,7 @@ export interface User {
   username: string
   initials: string
   avatar: string
-  position: string
+  position: PlayerPosition | ''
 }
 
 export interface AuthProfile {
@@ -30,6 +31,7 @@ export interface AuthProfile {
   name: string
   handle: string
   avatar: string | null
+  position: PlayerPosition | null
   createdAt: string
   updatedAt: string
 }
@@ -100,6 +102,27 @@ export interface MatchScore {
   dark: number
 }
 
+export interface MatchMvpVote {
+  id: string
+  matchId: string
+  voterUserId: string
+  participantId: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface MatchComment {
+  id: string
+  matchId: string
+  userId: string
+  body: string
+  authorName: string
+  authorHandle: string
+  authorAvatar?: string
+  createdAt: string
+  updatedAt: string
+}
+
 export interface Match {
   id: string
   groupId: string
@@ -113,6 +136,8 @@ export interface Match {
   score?: MatchScore
   mvpUserId?: string
   mvpParticipantId?: string
+  mvpVotes?: MatchMvpVote[]
+  comments?: MatchComment[]
   guestStats: GuestMatchStats[]
   createdAt: string
   updatedAt: string

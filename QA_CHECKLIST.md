@@ -92,11 +92,27 @@ Repetir los intentos equivalentes con A contra datos privados de B.
 
 - [ ] A crea un partido en el grupo compartido y B lo ve desde otro dispositivo/sesiÃ³n.
 - [ ] B abre el link/código, se une a un equipo y carga stats.
-- [ ] A agrega un invitado, carga sus stats, score y MVP.
+- [ ] A agrega un invitado y carga sus stats y score; A y B emiten sus votos MVP.
 - [ ] En Perfil, el nombre del partido aparece como enlace con flecha.
 - [ ] Hacer clic abre directamente el detalle de ese partido.
 - [ ] Volver a Perfil y confirmar que editar/borrar la stat sigue funcionando.
 - [ ] Confirmar `stat_entries.match_id` y que `local_match_id` queda nulo en vínculos nuevos.
+
+## Votación MVP
+
+- [ ] El creador anotado como participante puede votar.
+- [ ] Otro participante puede votar y cambiar su voto.
+- [ ] Un usuario que puede ver el partido pero no participa no puede votar.
+- [ ] Dos votos distintos muestran “MVP empatado” sin asignar una estrella única.
+- [ ] Una mayoría única muestra el ganador y los conteos correctos.
+
+## Comentarios por partido
+
+- [ ] A y B, anotados como participantes, pueden leer los comentarios del partido.
+- [ ] A publica un comentario y puede editarlo sin crear una segunda fila.
+- [ ] A borra su comentario y no puede editar ni borrar el comentario de B.
+- [ ] Un comentario vacío o de más de 240 caracteres es rechazado.
+- [ ] Un miembro del grupo que no participa del partido no puede leer ni escribir comentarios.
 
 ## Modo local
 

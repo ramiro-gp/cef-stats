@@ -22,6 +22,14 @@ function rankingValue(player: RankingPlayer, tab: RankingTab): string {
   return player.worldCupsWon ? `${player.worldCupsWon} ganado${player.worldCupsWon === 1 ? '' : 's'}` : worldCupStageLabels[player.worldCupStage]
 }
 
+function rankingDetail(player: RankingPlayer, tab: RankingTab): string {
+  if (tab === 'goals') return `${(player.matches ? player.goals / player.matches : 0).toFixed(2)} por partido`
+  if (tab === 'assists') return `${(player.matches ? player.assists / player.matches : 0).toFixed(2)} por partido`
+  if (tab === 'matches') return `${player.wins}/${player.matches} ganados`
+  if (tab === 'average') return `${player.goals} goles · ${player.matches} partidos`
+  return `${player.matches} partidos cargados`
+}
+
 export function RankingsPage({ group, players }: { group: Group; players: RankingPlayer[] }) {
   const [tab, setTab] = useState<RankingTab>('goals')
   const personalScope = isPersonalScope(group)
@@ -41,7 +49,7 @@ export function RankingsPage({ group, players }: { group: Group; players: Rankin
           <div className={`w-7 text-center text-sm font-black ${index < 3 ? 'text-emerald-500' : 'text-slate-400'}`}>{index + 1}</div>
           <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-black text-white ${player.accent}`}>{player.initials}</div>
           <div className="min-w-0 flex-1"><div className="truncate font-bold">{player.name} {player.isCurrentUser && <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500">Vos</span>}</div><div className="mt-0.5 text-xs text-slate-400">{player.wins}V · {player.draws}E · {player.losses}D</div></div>
-          <div className="text-right"><div className="font-black tabular-nums">{rankingValue(player, tab)}</div>{index < 3 && <div className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-400">Top {index + 1}</div>}</div>
+          <div className="text-right"><div className="font-black tabular-nums">{rankingValue(player, tab)}</div><div className="mt-0.5 text-[10px] text-slate-400">{rankingDetail(player, tab)}</div>{index < 3 && <div className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-400">Top {index + 1}</div>}</div>
         </div>)}
       </section>
       <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.04]">

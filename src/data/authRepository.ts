@@ -1,6 +1,6 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
-import type { AuthProfile } from '../types'
+import type { AuthProfile, PlayerPosition } from '../types'
 import { normalizeHandle } from '../utils/identity'
 
 interface ProfileRow {
@@ -8,6 +8,7 @@ interface ProfileRow {
   name: string
   handle: string
   avatar: string | null
+  position: PlayerPosition | null
   created_at: string
   updated_at: string
 }
@@ -24,8 +25,10 @@ export interface SignUpValues {
   handle: string
 }
 
+const profileColumns = 'id,name,handle,avatar,position,created_at,updated_at'
+
 function toProfile(row: ProfileRow): AuthProfile {
-  return { id: row.id, name: row.name, handle: row.handle, avatar: row.avatar, createdAt: row.created_at, updatedAt: row.updated_at }
+  return { id: row.id, name: row.name, handle: row.handle, avatar: row.avatar, position: row.position, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 
 function authErrorMessage(message: string): string {
@@ -35,6 +38,7 @@ function authErrorMessage(message: string): string {
   if (normalized.includes('email not confirmed')) return 'Confirmá tu email antes de entrar.'
   if (normalized.includes('user already registered')) return 'Ya existe una cuenta con ese email.'
   if (normalized.includes('database error saving new user')) return 'No se pudo crear el perfil. El @usuario podría estar en uso.'
+  if (normalized.includes('position') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/004_add_profile_position.sql.'
   return message
 }
 
@@ -60,7 +64,7 @@ export const authRepository = {
   async getProfile(userId: string): Promise<{ profile: AuthProfile | null; error?: string }> {
     const { client, error } = requireClient()
     if (!client) return { profile: null, error: error! }
-    const response = await client.from('profiles').select('id,name,handle,avatar,created_at,updated_at').eq('id', userId).maybeSingle<ProfileRow>()
+    const response = await client.from('profiles').select(profileColumns).eq('id', userId).maybeSingle<ProfileRow>()
     if (response.error) return { profile: null, error: authErrorMessage(response.error.message) }
     return { profile: response.data ? toProfile(response.data) : null }
   },
@@ -77,7 +81,7 @@ export const authRepository = {
     }
     const { client, error } = requireClient()
     if (!client) return { profile: null, error: error! }
-    const response = await client.from('profiles').insert(row).select('id,name,handle,avatar,created_at,updated_at').single<ProfileRow>()
+    const response = await client.from('profiles').insert(row).select(profileColumns).single<ProfileRow>()
     if (response.error) return { profile: null, error: authErrorMessage(response.error.message) }
     return { profile: toProfile(response.data) }
   },
@@ -109,10 +113,10 @@ export const authRepository = {
     const response = await client.auth.signOut()
     return response.error ? { error: authErrorMessage(response.error.message) } : {}
   },
-  async updateProfile(user: SupabaseUser, values: Pick<AuthProfile, 'name' | 'handle' | 'avatar'>): Promise<{ profile?: AuthProfile; error?: string }> {
+  async updateProfile(user: SupabaseUser, values: Pick<AuthProfile, 'name' | 'handle' | 'avatar' | 'position'>): Promise<{ profile?: AuthProfile; error?: string }> {
     const { client, error } = requireClient()
     if (!client) return { error: error! }
-    const response = await client.from('profiles').update({ name: values.name.trim(), handle: normalizeHandle(values.handle), avatar: values.avatar?.trim() || null, updated_at: new Date().toISOString() }).eq('id', user.id).select('id,name,handle,avatar,created_at,updated_at').single<ProfileRow>()
+    const response = await client.from('profiles').update({ name: values.name.trim(), handle: normalizeHandle(values.handle), avatar: values.avatar?.trim() || null, position: values.position || null, updated_at: new Date().toISOString() }).eq('id', user.id).select(profileColumns).single<ProfileRow>()
     if (response.error) return { error: authErrorMessage(response.error.message) }
     return { profile: toProfile(response.data) }
   },
