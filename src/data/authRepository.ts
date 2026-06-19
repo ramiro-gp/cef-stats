@@ -16,6 +16,7 @@ interface ProfileRow {
 export interface AuthResult {
   error?: string
   message?: string
+  session?: Session
 }
 
 export interface SignUpValues {
@@ -31,15 +32,28 @@ function toProfile(row: ProfileRow): AuthProfile {
   return { id: row.id, name: row.name, handle: row.handle, avatar: row.avatar, position: row.position, createdAt: row.created_at, updatedAt: row.updated_at }
 }
 
-function authErrorMessage(message: string): string {
-  const normalized = message.toLowerCase()
+export function authErrorMessage(reason: unknown): string {
+  const source = reason && typeof reason === 'object' ? reason as { message?: unknown; error_description?: unknown; status?: unknown; code?: unknown } : null
+  const rawMessage = typeof reason === 'string'
+    ? reason
+    : typeof source?.message === 'string'
+      ? source.message
+      : typeof source?.error_description === 'string'
+        ? source.error_description
+        : ''
+  const status = typeof source?.status === 'number' ? source.status : Number(source?.status || 0)
+  const code = typeof source?.code === 'string' ? source.code.toLowerCase() : ''
+  const normalized = `${code} ${rawMessage}`.toLowerCase()
   if (normalized.includes('profiles_handle_key') || normalized.includes('duplicate') || normalized.includes('unique')) return 'Ese @usuario ya está en uso.'
   if (normalized.includes('invalid login credentials')) return 'Email o contraseña incorrectos.'
   if (normalized.includes('email not confirmed')) return 'Confirmá tu email antes de entrar.'
-  if (normalized.includes('user already registered')) return 'Ya existe una cuenta con ese email.'
+  if (normalized.includes('user already registered') || normalized.includes('identity_already_exists') || normalized.includes('email already')) return 'Ya existe una cuenta con ese email.'
   if (normalized.includes('database error saving new user')) return 'No se pudo crear el perfil. El @usuario podría estar en uso.'
+  if (normalized.includes('weak_password') || normalized.includes('password should') || normalized.includes('password must') || normalized.includes('at least 6')) return 'La contraseña no cumple los requisitos de seguridad. Usá al menos 6 caracteres.'
+  if (status === 429 || normalized.includes('rate limit') || normalized.includes('too many requests') || normalized.includes('over_email_send_rate_limit')) return 'Demasiados intentos. Esperá unos minutos y volvé a probar.'
   if (normalized.includes('position') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/004_add_profile_position.sql.'
-  return message
+  if (status >= 500 || normalized.includes('internal server error') || normalized.includes('unexpected_failure')) return 'Supabase tuvo un error interno. Probá nuevamente en unos minutos.'
+  return rawMessage.trim() && rawMessage.trim() !== '{}' ? rawMessage.trim() : 'No pudimos completar la operación. Probá nuevamente.'
 }
 
 function requireClient() {
@@ -52,7 +66,8 @@ export const authRepository = {
   async getSession(): Promise<Session | null> {
     const { client } = requireClient()
     if (!client) return null
-    const { data } = await client.auth.getSession()
+    const { data, error } = await client.auth.getSession()
+    if (error) throw new Error(authErrorMessage(error))
     return data.session
   },
   onAuthStateChange(callback: (session: Session | null) => void): () => void {
@@ -65,7 +80,7 @@ export const authRepository = {
     const { client, error } = requireClient()
     if (!client) return { profile: null, error: error! }
     const response = await client.from('profiles').select(profileColumns).eq('id', userId).maybeSingle<ProfileRow>()
-    if (response.error) return { profile: null, error: authErrorMessage(response.error.message) }
+    if (response.error) return { profile: null, error: authErrorMessage(response.error) }
     return { profile: response.data ? toProfile(response.data) : null }
   },
   async ensureProfile(user: SupabaseUser): Promise<{ profile: AuthProfile | null; error?: string }> {
@@ -82,42 +97,51 @@ export const authRepository = {
     const { client, error } = requireClient()
     if (!client) return { profile: null, error: error! }
     const response = await client.from('profiles').insert(row).select(profileColumns).single<ProfileRow>()
-    if (response.error) return { profile: null, error: authErrorMessage(response.error.message) }
+    if (response.error) return { profile: null, error: authErrorMessage(response.error) }
     return { profile: toProfile(response.data) }
   },
   async signIn(email: string, password: string): Promise<AuthResult> {
     const { client, error } = requireClient()
     if (!client) return { error: error! }
-    const response = await client.auth.signInWithPassword({ email: email.trim(), password })
-    return response.error ? { error: authErrorMessage(response.error.message) } : {}
+    try {
+      const response = await client.auth.signInWithPassword({ email: email.trim(), password })
+      return response.error ? { error: authErrorMessage(response.error) } : { session: response.data.session }
+    } catch (reason) {
+      return { error: authErrorMessage(reason) }
+    }
   },
   async signUp(values: SignUpValues): Promise<AuthResult> {
     const { client, error } = requireClient()
     if (!client) return { error: error! }
     const handle = normalizeHandle(values.handle)
-    const availability = await client.rpc('is_handle_available', { p_handle: handle })
-    if (availability.error) return { error: 'No pudimos validar el @usuario. Verificá que hayas ejecutado supabase/schema.sql.' }
-    if (!availability.data) return { error: 'Ese @usuario ya está en uso.' }
-    const response = await client.auth.signUp({
-      email: values.email.trim(),
-      password: values.password,
-      options: { data: { name: values.name.trim(), handle } },
-    })
-    if (response.error) return { error: authErrorMessage(response.error.message) }
-    if (!response.data.session) return { message: 'Cuenta creada. Revisá tu email para confirmar el registro y después iniciá sesión.' }
-    return {}
+    try {
+      const availability = await client.rpc('is_handle_available', { p_handle: handle })
+      if (availability.error) return { error: authErrorMessage(availability.error) }
+      if (!availability.data) return { error: 'Ese @usuario ya está en uso.' }
+      const response = await client.auth.signUp({
+        email: values.email.trim(),
+        password: values.password,
+        options: { data: { name: values.name.trim(), handle } },
+      })
+      if (response.error) return { error: authErrorMessage(response.error) }
+      if (response.data.user && response.data.user.identities?.length === 0) return { error: 'Ya existe una cuenta con ese email.' }
+      if (response.data.session) return { session: response.data.session }
+      return { message: 'Cuenta creada, pero la sesión no se inició automáticamente. Iniciá sesión para continuar.' }
+    } catch (reason) {
+      return { error: authErrorMessage(reason) }
+    }
   },
   async signOut(): Promise<AuthResult> {
     const { client, error } = requireClient()
     if (!client) return { error: error! }
     const response = await client.auth.signOut()
-    return response.error ? { error: authErrorMessage(response.error.message) } : {}
+    return response.error ? { error: authErrorMessage(response.error) } : {}
   },
   async updateProfile(user: SupabaseUser, values: Pick<AuthProfile, 'name' | 'handle' | 'avatar' | 'position'>): Promise<{ profile?: AuthProfile; error?: string }> {
     const { client, error } = requireClient()
     if (!client) return { error: error! }
     const response = await client.from('profiles').update({ name: values.name.trim(), handle: normalizeHandle(values.handle), avatar: values.avatar?.trim() || null, position: values.position || null, updated_at: new Date().toISOString() }).eq('id', user.id).select(profileColumns).single<ProfileRow>()
-    if (response.error) return { error: authErrorMessage(response.error.message) }
+    if (response.error) return { error: authErrorMessage(response.error) }
     return { profile: toProfile(response.data) }
   },
 }

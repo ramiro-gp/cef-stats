@@ -74,7 +74,7 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
         <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><FireIcon className="h-5 w-5 text-orange-500"/><div className="mt-4 text-2xl font-black">{totals.scoringStreak}</div><div className="text-xs text-slate-400">Racha goleadora</div></div><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><TrophyIcon className="h-5 w-5 text-emerald-500"/><div className="mt-4 text-2xl font-black">{totals.winRate}%</div><div className="text-xs text-slate-400">Partidos ganados</div></div></div>
       </div>
     </div>
-    {editingProfile && <ProfileEditor user={user} onSave={onSaveUser} onClose={() => setEditingProfile(false)} />}
+    {editingProfile && <ProfileEditor user={user} accountMode={accountMode} onSave={onSaveUser} onClose={() => setEditingProfile(false)} />}
     {selectedEntry && <StatEntryEditor entry={selectedEntry} onSave={values => onUpdateEntry(selectedEntry.id, values)} onDelete={() => onDeleteEntry(selectedEntry.id)} onClose={() => setSelectedEntry(null)} />}
     {linkEntry && <LinkEntrySheet entry={linkEntry} matches={matches} groups={groups} allEntries={allEntries} onLink={onLinkEntry} onEditExisting={entry => setSelectedEntry(entry)} onClose={() => setLinkEntry(null)} />}
     {settingsOpen && <SettingsSheet theme={theme} onTheme={onTheme} onReset={onReset} onClose={() => setSettingsOpen(false)} />}

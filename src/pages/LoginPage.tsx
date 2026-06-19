@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Logo } from '../components/Logo'
 import { ArrowUpIcon, FireIcon, TrophyIcon } from '../components/icons'
-import type { AuthResult, SignUpValues } from '../data/authRepository'
+import { authErrorMessage, type AuthResult, type SignUpValues } from '../data/authRepository'
 import { SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
 import { isValidHandle, normalizeHandle } from '../utils/identity'
 
@@ -26,6 +26,7 @@ export function LoginPage({ configured, loading, authError, pendingGroupCode = '
   const [message, setMessage] = useState('')
 
   const submit = async () => {
+    if (submitting || loading) return
     setError('')
     setMessage('')
     if (!configured) { setError(SUPABASE_NOT_CONFIGURED_MESSAGE); return }
@@ -34,12 +35,17 @@ export function LoginPage({ configured, loading, authError, pendingGroupCode = '
     if (mode === 'register' && !isValidHandle(handle)) { setError('El @usuario debe tener 3–24 caracteres: letras, números, punto o guion bajo.'); return }
     if (password.length < 6) { setError('La contraseña debe tener al menos 6 caracteres.'); return }
     setSubmitting(true)
-    const result = mode === 'register'
-      ? await onSignUp({ email, password, name, handle: normalizeHandle(handle) })
-      : await onSignIn(email, password)
-    setSubmitting(false)
-    if (result.error) setError(result.error)
-    if (result.message) setMessage(result.message)
+    try {
+      const result = mode === 'register'
+        ? await onSignUp({ email, password, name, handle: normalizeHandle(handle) })
+        : await onSignIn(email, password)
+      if (result.error) setError(result.error)
+      if (result.message) setMessage(result.message)
+    } catch (reason) {
+      setError(authErrorMessage(reason))
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const accountForm = mode !== 'welcome' && <div className="my-auto py-8">
@@ -61,7 +67,7 @@ export function LoginPage({ configured, loading, authError, pendingGroupCode = '
     {error && <p className="mt-4 rounded-xl bg-rose-500/10 p-3 text-sm font-semibold text-rose-300">{error}</p>}
     {!error && authError && <p className="mt-4 rounded-xl bg-rose-500/10 p-3 text-sm font-semibold text-rose-300">{authError}</p>}
     {message && <p className="mt-4 rounded-xl bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-300">{message}</p>}
-    <button type="button" onClick={submit} disabled={submitting || loading} className="mt-6 min-h-14 w-full rounded-2xl bg-emerald-500 px-6 font-extrabold text-ink disabled:opacity-50">{submitting || loading ? 'Procesando...' : mode === 'login' ? 'Entrar con cuenta' : 'Registrarme'}</button>
+    <button type="button" onClick={submit} disabled={submitting || loading} className="mt-6 min-h-14 w-full rounded-2xl bg-emerald-500 px-6 font-extrabold text-ink disabled:opacity-50">{submitting ? (mode === 'register' ? 'Creando cuenta...' : 'Entrando...') : loading ? 'Cargando sesión...' : mode === 'login' ? 'Entrar con cuenta' : 'Registrarme'}</button>
     <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setMessage('') }} className="mt-3 min-h-11 w-full text-sm font-bold text-slate-400">{mode === 'login' ? '¿No tenés cuenta? Registrate' : 'Ya tengo cuenta'}</button>
   </div>
 

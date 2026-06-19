@@ -29,9 +29,7 @@ import { pageFromPathname, pagePaths } from './config/routes'
 
 function mergeAuthProfile(profile: AuthProfile, localUser: User): User {
   const initials = profile.name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase() || localUser.initials
-  const storedNickname = localUser.nickname.trim()
-  const nickname = storedNickname && storedNickname.toLowerCase() !== 'rami' ? storedNickname : profile.name
-  return { ...localUser, id: profile.id, name: profile.name, nickname, username: profile.handle, avatar: profile.avatar || initials, initials, position: profile.position ?? '' }
+  return { ...localUser, id: profile.id, name: profile.name, nickname: profile.name, username: profile.handle, avatar: profile.avatar || initials, initials, position: profile.position ?? '' }
 }
 
 function initialGroupInviteCode(): string {
@@ -136,6 +134,7 @@ export default function App() {
     if (accountMode) {
       const result = await auth.updateProfile({ name: nextUser.name, handle: nextUser.username, avatar: nextUser.avatar, position: nextUser.position || null })
       if (result.error) return result.error
+      return
     }
     store.setUser(nextUser)
   }

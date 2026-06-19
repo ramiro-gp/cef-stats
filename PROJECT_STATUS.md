@@ -60,7 +60,7 @@ Supabase Auth/API                ↓
 - Los rankings mock y contadores históricos no representan miembros reales completos.
 - `GroupMember` ya existe y se migra para el usuario local, pero los miembros mock restantes no se inventan.
 - El Mundial Personal continúa calculándose en frontend y no fue modificado.
-- El usuario autenticado aporta nombre, handle, avatar y posición; nickname sigue local.
+- El usuario autenticado aporta nombre, handle, avatar y posición. En modo cuenta, si no hay apodo remoto, la interfaz usa el nombre y no hereda datos del modo local.
 - Las tablas remotas de grupos están conectadas a la UI solo en modo cuenta.
 - Stats y partidos autenticados se leen y escriben en Supabase; feed/banner siguen como proyecciones frontend.
 - Mi historial usa su propio ID local y es el fallback personal-first cuando no hay grupos.

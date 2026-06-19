@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
-import { authRepository, type AuthResult, type SignUpValues } from '../data/authRepository'
+import { authErrorMessage, authRepository, type AuthResult, type SignUpValues } from '../data/authRepository'
 import type { AuthProfile } from '../types'
 
 export function useAuth() {
@@ -30,7 +30,7 @@ export function useAuth() {
     let active = true
     void authRepository.getSession().then(session => { if (active) void syncSession(session) }).catch(reason => {
       if (!active) return
-      setError(reason instanceof Error ? reason.message : 'No pudimos recuperar tu sesión.')
+      setError(authErrorMessage(reason))
       setLoading(false)
     })
     const unsubscribe = authRepository.onAuthStateChange(session => { if (active) window.setTimeout(() => void syncSession(session), 0) })
@@ -64,6 +64,18 @@ export function useAuth() {
     return result
   }, [])
 
+  const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+    const result = await authRepository.signIn(email, password)
+    if (result.session) await syncSession(result.session)
+    return result
+  }, [syncSession])
+
+  const signUp = useCallback(async (values: SignUpValues): Promise<AuthResult> => {
+    const result = await authRepository.signUp(values)
+    if (result.session) await syncSession(result.session)
+    return result
+  }, [syncSession])
+
   return {
     configured: authRepository.configured,
     status,
@@ -71,8 +83,8 @@ export function useAuth() {
     profile,
     loading,
     error,
-    signIn: authRepository.signIn,
-    signUp: (values: SignUpValues) => authRepository.signUp(values),
+    signIn,
+    signUp,
     signOut,
     refreshProfile,
     updateProfile,
