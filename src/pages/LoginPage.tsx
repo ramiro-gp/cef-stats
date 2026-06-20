@@ -71,7 +71,7 @@ export function LoginPage({ configured, loading, authError, pendingGroupCode = '
     <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setMessage('') }} className="mt-3 min-h-11 w-full text-sm font-bold text-slate-400">{mode === 'login' ? '¿No tenés cuenta? Registrate' : 'Ya tengo cuenta'}</button>
   </div>
 
-  return <div className="relative flex min-h-screen overflow-hidden bg-ink px-5 py-8 text-white">
+  return <div className="relative flex min-h-dvh overflow-hidden bg-ink px-5 py-8 text-white">
     <div className="absolute -right-32 -top-24 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl" />
     <div className="absolute -bottom-40 -left-32 h-96 w-96 rounded-full bg-emerald-400/10 blur-3xl" />
     <div className="relative mx-auto flex w-full max-w-md flex-col">

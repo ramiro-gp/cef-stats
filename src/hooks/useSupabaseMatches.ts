@@ -65,7 +65,7 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     }
   }, [])
 
-  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat; groupId?: string | null }) => {
+  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat; groupId?: string | null; lightTeamName: string; darkTeamName: string }) => {
     const targetGroupId = values.groupId === undefined ? groupId : values.groupId
     return mutate(async () => upsert(await supabaseMatchRepository.createMatch(targetGroupId, values)))
   }, [groupId, mutate, upsert])
@@ -87,6 +87,8 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     setEntries(current => [...current.filter(entry => entry.matchId !== joined.id), ...loadedEntries])
     return joined
   }), [matches, mutate, upsert])
+
+  const setParticipantTeam = useCallback((matchId: string, participantId: string, team: MatchTeam) => mutate(async () => upsert(await supabaseMatchRepository.setParticipantTeam(matchId, participantId, team))), [mutate, upsert])
 
   const leaveMatch = useCallback((matchId: string) => mutate(async () => {
     if (!userId) throw new Error('Necesitás iniciar sesión.')
@@ -140,5 +142,5 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     return saved
   }), [entries, matches, mutate, userId])
 
-  return { matches, entries, loading, saving, error, createMatch, lookupMatch, joinTeam, leaveMatch, saveScore, setMvp, saveComment, deleteComment, addGuest, updateGuest, removeGuest, saveGuestStats, saveStats, reload: load }
+  return { matches, entries, loading, saving, error, createMatch, lookupMatch, joinTeam, setParticipantTeam, leaveMatch, saveScore, setMvp, saveComment, deleteComment, addGuest, updateGuest, removeGuest, saveGuestStats, saveStats, reload: load }
 }

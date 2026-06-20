@@ -6,6 +6,8 @@ interface MatchRow {
   id: string
   host_group_id: string | null
   title: string
+  light_team_name: string
+  dark_team_name: string
   format: MatchFormat
   invite_code: string
   scheduled_at: string
@@ -70,7 +72,7 @@ interface MatchGroupLabelRow {
   group_name: string
 }
 
-const matchColumns = 'id,host_group_id,title,format,invite_code,scheduled_at,created_by,status,light_score,dark_score,mvp_user_id,mvp_guest_id,created_at,updated_at'
+const matchColumns = 'id,host_group_id,title,light_team_name,dark_team_name,format,invite_code,scheduled_at,created_by,status,light_score,dark_score,mvp_user_id,mvp_guest_id,created_at,updated_at'
 
 function client() {
   if (!supabase) throw new Error(SUPABASE_NOT_CONFIGURED_MESSAGE)
@@ -84,6 +86,9 @@ function matchError(message: string): string {
   if ((normalized.includes('list_my_matches') || normalized.includes('get_match_group_labels')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/007_allow_external_match_participants.sql.'
   if (normalized.includes('attend_match_by_invite') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/008_allow_match_participants_without_team.sql.'
   if (normalized.includes('host_group_id') && normalized.includes('not-null')) return 'Falta ejecutar supabase/patches/012_allow_matches_without_group.sql.'
+  if ((normalized.includes('light_team_name') || normalized.includes('set_match_participant_team')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/014_add_match_team_names_and_admin_team_assignment.sql.'
+  if (normalized.includes('only match creator')) return 'Sólo quien creó el partido puede cambiar equipos ajenos.'
+  if (normalized.includes('team is full')) return 'Ese equipo ya está completo.'
   if (normalized.includes('matches') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
   if (normalized.includes('invalid match invite code')) return 'No encontramos un partido con ese código.'
   if (normalized.includes('group membership required')) return 'Necesitás pertenecer al grupo para crear un partido.'
@@ -150,6 +155,8 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
       groupId: row.host_group_id ?? '',
       groupName: groupLabels.get(row.id),
       title: row.title,
+      lightTeamName: row.light_team_name || 'CLARO',
+      darkTeamName: row.dark_team_name || 'OSCURO',
       format: row.format,
       scheduledAt: row.scheduled_at,
       createdByUserId: row.created_by,
@@ -212,8 +219,8 @@ export const supabaseMatchRepository = {
     return result.data ? this.getMatch(result.data as string) : null
   },
 
-  async createMatch(groupId: string | null, values: { title: string; scheduledAt: string; format?: MatchFormat }): Promise<Match> {
-    const result = await client().rpc('create_match_with_invite', { p_host_group_id: groupId, p_title: values.title.trim(), p_format: values.format ?? 'F5', p_scheduled_at: values.scheduledAt })
+  async createMatch(groupId: string | null, values: { title: string; scheduledAt: string; format?: MatchFormat; lightTeamName: string; darkTeamName: string }): Promise<Match> {
+    const result = await client().rpc('create_match_with_invite', { p_host_group_id: groupId, p_title: values.title.trim(), p_format: values.format ?? 'F5', p_scheduled_at: values.scheduledAt, p_light_team_name: values.lightTeamName, p_dark_team_name: values.darkTeamName })
     if (result.error) throw new Error(matchError(result.error.message))
     const row = (Array.isArray(result.data) ? result.data[0] : result.data) as MatchRow | undefined
     if (!row) throw new Error('Supabase no devolvió el partido creado.')
@@ -224,6 +231,12 @@ export const supabaseMatchRepository = {
     const result = await client().rpc('join_match_by_invite', { p_invite_code: extractInviteCode(inviteCode), p_team: team })
     if (result.error) throw new Error(matchError(result.error.message))
     return this.getMatch(result.data as string)
+  },
+
+  async setParticipantTeam(matchId: string, participantId: string, team: MatchTeam): Promise<Match> {
+    const result = await client().rpc('set_match_participant_team', { p_match_id: matchId, p_participant_id: participantId, p_team: team })
+    if (result.error) throw new Error(matchError(result.error.message))
+    return this.getMatch(matchId)
   },
 
   async leaveMatch(matchId: string, userId: string): Promise<void> {

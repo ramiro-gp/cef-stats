@@ -139,6 +139,8 @@ export interface Match {
   groupId: string
   groupName?: string
   title: string
+  lightTeamName: string
+  darkTeamName: string
   format?: MatchFormat
   scheduledAt: string
   createdByUserId: string

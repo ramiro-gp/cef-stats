@@ -93,7 +93,7 @@ export function useLocalStore() {
     setState(current => ({ ...current, groups: current.groups.map(item => item.id === id ? { ...item, ...values, spicyMode: true } : item) }))
   }, [])
 
-  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat }, groupIdOverride?: string) => {
+  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat; lightTeamName: string; darkTeamName: string }, groupIdOverride?: string) => {
     const createdAt = new Date().toISOString()
     const id = createId('match')
     const groupId = groupIdOverride ?? state.activeGroupId
@@ -101,6 +101,8 @@ export function useLocalStore() {
       id,
       groupId,
       title: values.title.trim() || 'Partido de hoy',
+      lightTeamName: values.lightTeamName || 'CLARO',
+      darkTeamName: values.darkTeamName || 'OSCURO',
       scheduledAt: values.scheduledAt,
       format: values.format,
       createdByUserId: state.user.id,
@@ -125,6 +127,11 @@ export function useLocalStore() {
       const event: MatchEvent = { id: createId('event'), groupId: match.groupId, matchId, type: 'joined_team', userId: current.user.id, team, createdAt }
       return { ...current, matches: current.matches.map(item => item.id === matchId ? { ...item, participants, updatedAt: createdAt } : item), matchEvents: [...current.matchEvents, event] }
     })
+  }, [])
+
+  const setParticipantTeam = useCallback((matchId: string, participantId: string, team: MatchTeam) => {
+    const updatedAt = new Date().toISOString()
+    setState(current => ({ ...current, matches: current.matches.map(match => match.id === matchId ? { ...match, participants: match.participants.map(participant => participant.id === participantId ? { ...participant, team } : participant), updatedAt } : match), entries: current.entries.map(entry => entry.matchId === matchId && current.matches.find(match => match.id === matchId)?.participants.find(participant => participant.id === participantId)?.userId === entry.userId ? { ...entry, team } : entry) }))
   }, [])
 
   const leaveMatch = useCallback((matchId: string) => {
@@ -231,7 +238,7 @@ export function useLocalStore() {
     return true
   }, [state.entries, state.matches])
 
-  return useMemo(() => ({ ...state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch }), [state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch])
+  return useMemo(() => ({ ...state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, setParticipantTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch }), [state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, setParticipantTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch])
 }
 
 export type AddStatEntry = (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>) => StatEntry | Promise<StatEntry>

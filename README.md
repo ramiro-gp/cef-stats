@@ -119,6 +119,8 @@ Los patches `009_add_stat_entry_context.sql`, `010_expand_stat_football_formats.
 
 `013_harden_invite_codes.sql` ya está aplicado. Fortalece únicamente los códigos nuevos de grupos y partidos y no modifica códigos existentes.
 
+`014_add_match_team_names_and_admin_team_assignment.sql` ya está aplicado. Agrega nombres personalizados por partido y un RPC exclusivo del creador para asignar o mover participantes.
+
 ## Alcance de Partidos
 
 - `/partidos` muestra todos los partidos donde participa el usuario, aunque pertenezcan a grupos distintos, más los partidos que organizó.

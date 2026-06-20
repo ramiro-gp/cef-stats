@@ -55,7 +55,7 @@ export async function createProfileCardPng(user: User, totals: UserTotals): Prom
   if (handle) { context.fillStyle = '#34d399'; context.font = '700 30px Inter, Arial, sans-serif'; context.fillText(`@${handle}`, 540, 658) }
   if (user.position) { context.fillStyle = '#cbd5e1'; context.font = '600 28px Inter, Arial, sans-serif'; context.fillText(user.position, 540, 704) }
 
-  const stats = [{ label: 'PARTIDOS', value: totals.matches }, { label: 'GOLES', value: totals.goals }, { label: 'ASISTENCIAS', value: totals.assists }]
+  const stats = [{ label: 'GOLES', value: totals.goals }, { label: 'ASISTENCIAS', value: totals.assists }, { label: 'PARTIDOS', value: totals.matches }]
   stats.forEach((stat, index) => {
     const x = 75 + index * 325
     context.fillStyle = 'rgba(255,255,255,.08)'; roundedRect(context, x, 785, 280, 230, 36)

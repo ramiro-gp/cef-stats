@@ -10,8 +10,8 @@ function getStorage(): Storage | null {
 
 export function createStringStorageAdapter(key: string): StorageAdapter<string> {
   return {
-    load: () => getStorage()?.getItem(key) ?? null,
-    save: value => getStorage()?.setItem(key, value),
-    clear: () => getStorage()?.removeItem(key),
+    load: () => { try { return getStorage()?.getItem(key) ?? null } catch { return null } },
+    save: value => { try { getStorage()?.setItem(key, value) } catch { /* Preferencia opcional: la app sigue funcionando sin persistencia local. */ } },
+    clear: () => { try { getStorage()?.removeItem(key) } catch { /* Sin efecto si el navegador bloquea storage. */ } },
   }
 }

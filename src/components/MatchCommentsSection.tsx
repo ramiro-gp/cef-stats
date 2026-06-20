@@ -38,7 +38,7 @@ export function MatchCommentsSection({ comments, userId, onSave, onDelete }: Pro
   }
 
   return <section className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.05] p-4">
-    <div><h3 className="font-extrabold">Picante del partido</h3><p className="mt-1 text-xs leading-5 text-slate-400">Una gastada, una declaración. Una por jugador.</p></div>
+    <div><h3 className="font-extrabold">FOROBARDO</h3><p className="mt-1 text-xs leading-5 text-slate-400">Una gastada, una declaración. Una por jugador.</p></div>
     <textarea value={body} maxLength={MAX_COMMENT_LENGTH} rows={3} onChange={event => { setBody(event.target.value); setError('') }} placeholder="Ej: La próxima traigan arquero 😏" className="mt-4 w-full resize-none rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-amber-500 dark:border-white/10 dark:bg-white/5" />
     <div className="mt-1 flex items-center justify-between text-[10px] text-slate-400"><span>{mine ? 'Podés editar tu comentario.' : 'Sólo lo ven participantes del partido.'}</span><span className="tabular-nums">{body.length}/{MAX_COMMENT_LENGTH}</span></div>
     {error && <p className="mt-2 text-xs font-bold text-rose-500">{error}</p>}

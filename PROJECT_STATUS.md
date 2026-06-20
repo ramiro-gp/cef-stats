@@ -99,4 +99,6 @@ pnpm lint
 
 Los patches 010, 011, 012 y 013 están aplicados: amplían formatos, agregan emoji de grupo, habilitan partidos sin grupo y fortalecen códigos nuevos sin migrar los existentes. Después conviene automatizar pruebas de RLS/RPCs.
 
+El patch 014 está aplicado para la versión 0.17.0; agrega nombres de equipos por partido y cambio de equipo administrado únicamente por su creador.
+
 Para corregir instalaciones existentes con el error de `gen_random_bytes`, ejecutar `supabase/patches/001_fix_invite_code_generation.sql` desde SQL Editor.

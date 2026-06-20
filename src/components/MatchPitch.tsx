@@ -9,10 +9,12 @@ interface Props {
   guestStats: GuestMatchStats[]
   mvpParticipantId?: string
   activeParticipantId?: string
+  lightTeamName?: string
+  darkTeamName?: string
   onSelect: (participant: MatchParticipant, anchor: HTMLElement) => void
 }
 
-export function MatchPitch({ participants, user, entries, guestStats, mvpParticipantId, activeParticipantId, onSelect }: Props) {
+export function MatchPitch({ participants, user, entries, guestStats, mvpParticipantId, activeParticipantId, lightTeamName = 'CLARO', darkTeamName = 'OSCURO', onSelect }: Props) {
   const team = (kind: 'light' | 'dark') => participants.filter(participant => participant.team === kind)
   const avatar = (participant: MatchParticipant) => getParticipantAvatar(participant, user)
   const name = (participant: MatchParticipant) => getParticipantName(participant, user)
@@ -54,7 +56,7 @@ export function MatchPitch({ participants, user, entries, guestStats, mvpPartici
       <div className="pointer-events-none absolute left-1/2 top-3 h-6 w-[20%] -translate-x-1/2 border-x-2 border-b-2 border-white/40" />
       <div className="pointer-events-none absolute bottom-3 left-1/2 h-16 w-[44%] -translate-x-1/2 border-2 border-b-0 border-white/50" />
       <div className="pointer-events-none absolute bottom-3 left-1/2 h-6 w-[20%] -translate-x-1/2 border-x-2 border-t-2 border-white/40" />
-      <div className="relative z-10 flex h-full flex-col justify-between">{renderTeam('dark')}<div className="relative z-10 mx-5 rounded-full border border-white/15 bg-[#06130f]/80 px-4 py-1 text-center text-[9px] font-black uppercase tracking-[.25em] text-white shadow-lg">Oscuro · Claro</div>{renderTeam('light')}</div>
+      <div className="relative z-10 flex h-full flex-col justify-between">{renderTeam('dark')}<div className="relative z-10 mx-5 truncate rounded-full border border-white/15 bg-[#06130f]/80 px-4 py-1 text-center text-[9px] font-black uppercase tracking-[.12em] text-white shadow-lg">{darkTeamName} · {lightTeamName}</div>{renderTeam('light')}</div>
     </div>
   </div>
 }

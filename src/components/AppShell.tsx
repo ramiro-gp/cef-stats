@@ -31,9 +31,9 @@ interface Props {
 export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGroup, onNavigate, children }: Props) {
   const personalScope = group ? isPersonalScope(group) : false
   const allScope = group ? isAllScope(group) : false
-  return <div className="min-h-screen bg-slate-50 text-slate-950 transition-colors dark:bg-ink dark:text-white">
+  return <div className="min-h-dvh bg-slate-50 text-slate-950 transition-colors dark:bg-ink dark:text-white">
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-[#09130f] lg:flex">
-      <Logo />
+      <button type="button" onClick={() => onNavigate('home')} aria-label="Ir al inicio" className="w-fit text-left"><Logo /></button>
       <p className="mt-2 text-xs text-slate-400">Tu fútbol, en números.</p>
       <nav className="mt-10 space-y-2">
         {desktopItems.map(({ page: itemPage, label, icon: Icon }) => <button key={itemPage} onClick={() => onNavigate(itemPage)} className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition ${page === itemPage ? 'bg-emerald-500 text-ink shadow-glow' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5'}`}><Icon />{label}</button>)}
@@ -49,7 +49,7 @@ export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGro
     <div className="lg:pl-64">
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-slate-50/90 px-3 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-ink/90 sm:px-4 lg:px-8">
         <div className="mx-auto flex max-w-6xl items-center gap-2">
-          <div className="shrink-0 lg:hidden"><Logo compact /></div>
+          <button type="button" onClick={() => onNavigate('home')} aria-label="Ir al inicio" className="shrink-0 lg:hidden"><Logo compact /></button>
           <div className="min-w-0 flex-1 lg:flex-none"><GroupSelector activeGroup={group} groups={groups} onSelect={onSelectGroup} /></div>
           <div className="ml-auto flex items-center gap-2">
             <button onClick={onTheme} aria-label={dark ? 'Activar modo claro' : 'Activar modo oscuro'} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:text-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">{dark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}</button>

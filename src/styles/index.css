@@ -7,7 +7,7 @@
   * { -webkit-tap-highlight-color: transparent; scrollbar-width: thin; scrollbar-color: rgba(16, 185, 129, .65) rgba(148, 163, 184, .16); }
   html { background: #07110e; }
   html.dark { scrollbar-color: rgba(52, 211, 153, .7) rgba(255, 255, 255, .07); }
-  body { margin: 0; min-width: 320px; min-height: 100vh; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  body { margin: 0; min-width: 320px; min-height: 100vh; min-height: 100dvh; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
   button, input, select { font: inherit; }
   button { touch-action: manipulation; }
   ::selection { background: rgba(16, 185, 129, .35); }
