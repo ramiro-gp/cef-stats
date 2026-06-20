@@ -8,6 +8,7 @@ interface GroupRow {
   name: string
   invite_code: string
   created_by: string | null
+  group_emoji?: string | null
   created_at: string
   updated_at: string
 }
@@ -58,6 +59,7 @@ function client() {
 
 function groupError(message: string): string {
   const normalized = message.toLowerCase()
+  if (normalized.includes('group_emoji')) return 'Falta ejecutar supabase/patches/011_add_group_emoji.sql.'
   if (normalized.includes('invalid invite code')) return 'No encontramos un grupo con ese código.'
   if (normalized.includes('already a member') || normalized.includes('duplicate')) return 'Ya pertenecés a ese grupo.'
   if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para realizar esta acción. Revisá las policies RLS.'
@@ -66,13 +68,16 @@ function groupError(message: string): string {
 }
 
 function toGroup(row: GroupRow, memberCount: number): Group {
-  return { id: row.id, name: row.name, code: row.invite_code, memberCount, gamesCount: 0, emoji: '⚽', spicyMode: true, seeded: false }
+  return { id: row.id, name: row.name, code: row.invite_code, memberCount, gamesCount: 0, emoji: row.group_emoji?.trim() || '⚽', spicyMode: true, seeded: false }
 }
+
+const groupColumns = 'id,name,invite_code,created_by,group_emoji,created_at,updated_at'
 
 function statError(message: string): string {
   const normalized = message.toLowerCase()
   if (normalized.includes('match_id') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
   if ((normalized.includes('match_type') || normalized.includes('football_format') || normalized.includes('played_position')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/009_add_stat_entry_context.sql.'
+  if (normalized.includes('stat_entries_football_format_check')) return 'Falta ejecutar supabase/patches/010_expand_stat_football_formats.sql.'
   if (normalized.includes('stat_entries') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/002_add_stat_entries.sql.'
   if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para guardar stats en este scope. Revisá tu membresía o participación en el partido.'
   if (normalized.includes('authentication') || normalized.includes('jwt')) return 'Tu sesión venció. Volvé a iniciar sesión.'
@@ -113,7 +118,7 @@ export const supabaseRepository = {
     const groupIds = (memberships.data ?? []).map(item => item.group_id as string)
     if (!groupIds.length) return []
     const [groupsResult, countsResult] = await Promise.all([
-      db.from('groups').select('id,name,invite_code,created_by,created_at,updated_at').in('id', groupIds),
+      db.from('groups').select(groupColumns).in('id', groupIds),
       db.from('group_members').select('group_id').in('group_id', groupIds),
     ])
     if (groupsResult.error) throw new Error(groupError(groupsResult.error.message))
@@ -123,18 +128,20 @@ export const supabaseRepository = {
     return (groupsResult.data as GroupRow[]).map(row => toGroup(row, counts.get(row.id) ?? 0)).sort((a, b) => a.name.localeCompare(b.name))
   },
 
-  async createGroup(name: string): Promise<Group> {
+  async createGroup(name: string, emoji = '⚽'): Promise<Group> {
     const db = client()
     const result = await db.rpc('create_group_with_membership', { p_name: name.trim() })
     if (result.error) throw new Error(groupError(result.error.message))
     const row = (Array.isArray(result.data) ? result.data[0] : result.data) as GroupRow | null
     if (!row) throw new Error('Supabase no devolvió el grupo creado.')
-    return toGroup(row, 1)
+    const updated = await db.from('groups').update({ group_emoji: emoji }).eq('id', row.id).select(groupColumns).single<GroupRow>()
+    if (updated.error) throw new Error(groupError(updated.error.message))
+    return toGroup(updated.data, 1)
   },
 
-  async updateGroup(groupId: string, name: string): Promise<Group> {
+  async updateGroup(groupId: string, values: Pick<Group, 'name' | 'emoji'>): Promise<Group> {
     const db = client()
-    const result = await db.from('groups').update({ name: name.trim(), updated_at: new Date().toISOString() }).eq('id', groupId).select('id,name,invite_code,created_by,created_at,updated_at').single<GroupRow>()
+    const result = await db.from('groups').update({ name: values.name.trim(), group_emoji: values.emoji || '⚽', updated_at: new Date().toISOString() }).eq('id', groupId).select(groupColumns).single<GroupRow>()
     if (result.error) throw new Error(groupError(result.error.message))
     const members = await this.getMembers(groupId)
     return toGroup(result.data, members.length)

@@ -28,6 +28,7 @@ function normalizeGroup(group: Group): Group {
   const seededGroup = availableGroups.find(candidate => candidate.id === group.id)
   return {
     ...group,
+    emoji: group.emoji || '⚽',
     spicyMode: true,
     seeded: group.seeded ?? Boolean(seededGroup),
   }
@@ -117,11 +118,11 @@ export function useLocalStore() {
   const setUser = useCallback((user: User) => setState(current => ({ ...current, user: { ...user, username: normalizeHandle(user.username) } })), [])
   const setGroup = useCallback((nextGroup: Group) => setState(current => ({ ...current, activeGroupId: nextGroup.id })), [])
 
-  const createGroup = useCallback((name: string) => {
+  const createGroup = useCallback((name: string, emoji = '⚽') => {
     let created!: Group
     setState(current => {
       const createdAt = new Date().toISOString()
-      created = { id: createId('group'), name: name.trim(), code: createUniqueGroupCode(name, current.groups), memberCount: 1, gamesCount: 0, emoji: '⚽', spicyMode: true, seeded: false }
+      created = { id: createId('group'), name: name.trim(), code: createUniqueGroupCode(name, current.groups), memberCount: 1, gamesCount: 0, emoji, spicyMode: true, seeded: false }
       const membership: GroupMember = { id: createId('member'), groupId: created.id, userId: current.user.id, role: 'owner', joinedAt: createdAt }
       return { ...current, groups: [...current.groups, created], groupMembers: [...current.groupMembers, membership], activeGroupId: created.id }
     })
@@ -139,14 +140,14 @@ export function useLocalStore() {
         const membership: GroupMember = { id: createId('member'), groupId: existing.id, userId: current.user.id, role: 'member', joinedAt: new Date().toISOString() }
         return { ...current, groupMembers: alreadyMember ? current.groupMembers : [...current.groupMembers, membership], activeGroupId: existing.id }
       }
-      joined = { id: createId('group'), name: `Grupo ${code}`, code, memberCount: 1, gamesCount: 0, emoji: '🤝', spicyMode: true, seeded: false }
+      joined = { id: createId('group'), name: `Grupo ${code}`, code, memberCount: 1, gamesCount: 0, emoji: '⚽', spicyMode: true, seeded: false }
       const membership: GroupMember = { id: createId('member'), groupId: joined.id, userId: current.user.id, role: 'member', joinedAt: new Date().toISOString() }
       return { ...current, groups: [...current.groups, joined], groupMembers: [...current.groupMembers, membership], activeGroupId: joined.id }
     })
     return joined
   }, [])
 
-  const updateGroup = useCallback((id: string, values: Partial<Pick<Group, 'name' | 'spicyMode'>>) => {
+  const updateGroup = useCallback((id: string, values: Partial<Pick<Group, 'name' | 'emoji' | 'spicyMode'>>) => {
     setState(current => ({ ...current, groups: current.groups.map(item => item.id === id ? { ...item, ...values, spicyMode: true } : item) }))
   }, [])
 

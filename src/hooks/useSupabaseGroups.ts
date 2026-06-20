@@ -73,8 +73,8 @@ export function useSupabaseGroups(userId: string | null) {
     return () => { active = false }
   }, [activeSharedGroup?.id])
 
-  const createGroup = useCallback(async (name: string) => {
-    const created = await supabaseRepository.createGroup(name)
+  const createGroup = useCallback(async (name: string, emoji = '⚽') => {
+    const created = await supabaseRepository.createGroup(name, emoji)
     const loaded = await loadGroups()
     selectGroup(loaded.find(group => group.id === created.id) ?? created)
     return created
@@ -89,9 +89,9 @@ export function useSupabaseGroups(userId: string | null) {
     return joined
   }, [loadGroups, selectGroup])
 
-  const updateGroup = useCallback(async (id: string, values: Partial<Pick<Group, 'name'>>) => {
+  const updateGroup = useCallback(async (id: string, values: Partial<Pick<Group, 'name' | 'emoji'>>) => {
     if (!values.name) return
-    const updated = await supabaseRepository.updateGroup(id, values.name)
+    const updated = await supabaseRepository.updateGroup(id, { name: values.name, emoji: values.emoji ?? '⚽' })
     setGroups(current => current.map(group => group.id === id ? updated : group))
   }, [])
 

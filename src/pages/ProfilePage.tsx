@@ -11,6 +11,8 @@ import { formatEntryDate } from '../utils/format'
 import { worldCupStageLabels } from '../utils/worldCup'
 import { worldCupProgress } from '../utils/activityFeed'
 import { formatStatContext } from '../utils/statContext'
+import { UserAvatar } from '../components/UserAvatar'
+import { ShareProfileCardButton } from '../components/ShareProfileCardButton'
 
 interface Props {
   user: User
@@ -27,7 +29,6 @@ interface Props {
   onDeleteEntry: (id: string) => void | Promise<void>
   onLinkEntry: (entryId: string, matchId: string, team: MatchTeam, result?: MatchResult) => boolean | Promise<boolean>
   onTheme: (theme: ThemeMode) => void
-  onReset: () => void
   onLogout: () => void
   accountMode?: boolean
   statsError?: string
@@ -41,7 +42,7 @@ interface Props {
   onHistoryPageChange?: (page: number) => void
 }
 
-export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onReset, onLogout, onOpenMatch, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', onHistoryPageChange }: Props) {
+export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', onHistoryPageChange }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<StatEntry | null>(null)
@@ -69,9 +70,10 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
       <div className="space-y-4">
         <section className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-6 text-white">
           <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
-          <div className="relative flex items-center gap-4"><div className="grid h-20 w-20 place-items-center rounded-3xl bg-emerald-500 text-2xl font-black text-ink">{user.avatar}</div><div className="min-w-0"><div className="truncate text-xl font-black">{user.name}</div><div className="mt-1 text-sm font-semibold text-emerald-400">{user.position || 'Sin posición'}</div><div className="mt-0.5 text-sm text-slate-400">@{user.username.replace(/^@/, '')}</div>{totals.scoringStreak > 0 && <span className="mt-2 inline-block rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">En racha</span>}</div></div>
+          <div className="relative flex items-center gap-4"><UserAvatar value={user.avatar} fallback={user.initials} className="h-20 w-20 rounded-3xl text-2xl" /><div className="min-w-0"><div className="truncate text-xl font-black">{user.name}</div><div className="mt-1 text-sm font-semibold text-emerald-400">{user.position || 'Sin posición'}</div><div className="mt-0.5 text-sm text-slate-400">@{user.username.replace(/^@/, '')}</div>{totals.scoringStreak > 0 && <span className="mt-2 inline-block rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">En racha</span>}</div></div>
           <div className="relative mt-6 grid grid-cols-3 divide-x divide-white/10 text-center"><div><div className="text-xl font-black">{totals.goals}</div><div className="text-[10px] text-slate-500">Goles</div></div><div><div className="text-xl font-black">{totals.assists}</div><div className="text-[10px] text-slate-500">Asist.</div></div><div><div className="text-xl font-black">{totals.matches}</div><div className="text-[10px] text-slate-500">Partidos</div></div></div>
           <button onClick={() => setEditingProfile(true)} className="relative mt-5 min-h-11 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold hover:bg-white/10">Editar perfil</button>
+          <div className="relative"><ShareProfileCardButton user={user} totals={totals} /></div>
         </section>
         <section className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.07] p-5">
           <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-xl bg-violet-500/15 text-violet-500"><TrophyIcon /></div><div><p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">Mundial personal · Ciclo {worldCup.currentCycle}</p><h3 className="font-extrabold">{worldCupStageLabels[worldCup.currentStage]}</h3></div></div>
@@ -100,6 +102,6 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
     {editingProfile && <ProfileEditor user={user} accountMode={accountMode} onSave={onSaveUser} onClose={() => setEditingProfile(false)} />}
     {selectedEntry && <StatEntryEditor entry={selectedEntry} onSave={values => onUpdateEntry(selectedEntry.id, values)} onDelete={() => onDeleteEntry(selectedEntry.id)} onClose={() => setSelectedEntry(null)} />}
     {linkEntry && <LinkEntrySheet entry={linkEntry} matches={matches} groups={groups} allEntries={allEntries} onLink={onLinkEntry} onEditExisting={entry => setSelectedEntry(entry)} onClose={() => setLinkEntry(null)} />}
-    {settingsOpen && <SettingsSheet theme={theme} onTheme={onTheme} onReset={onReset} onClose={() => setSettingsOpen(false)} />}
+    {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onClose={() => setSettingsOpen(false)} />}
   </>
 }

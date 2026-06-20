@@ -1,5 +1,6 @@
 import type { GuestMatchStats, MatchParticipant, StatEntry, User } from '../types'
 import { getParticipantAvatar, getParticipantName } from '../utils/matches'
+import { UserAvatar } from './UserAvatar'
 
 interface Props {
   participants: MatchParticipant[]
@@ -20,7 +21,7 @@ export function MatchPitch({ participants, user, entries, guestStats, mvpPartici
   const renderTeam = (kind: 'light' | 'dark') => {
     const players = team(kind)
     const columns = players.length > 6 ? 'grid-cols-4' : 'grid-cols-3'
-    return <div className={`grid h-[45%] ${columns} content-center gap-x-1.5 gap-y-2 px-3 py-3 sm:gap-x-3 sm:gap-y-3 sm:px-6`}>
+    return <div className={`grid h-[45%] ${columns} content-center gap-x-1.5 gap-y-2 px-3 py-3 sm:gap-x-3 sm:gap-y-3 sm:px-6 ${kind === 'dark' ? 'pb-7' : 'pt-7'}`}>
       {players.map(participant => {
         const playerStats = stats(participant)
         const active = activeParticipantId === participant.id
@@ -30,12 +31,12 @@ export function MatchPitch({ participants, user, entries, guestStats, mvpPartici
           onClick={event => onSelect(participant, event.currentTarget)}
           aria-label={`Ver stats de ${name(participant)}`}
           aria-pressed={active}
-          className="group relative flex min-w-0 flex-col items-center"
+          className="group relative z-20 flex min-w-0 flex-col items-center"
         >
-          <span className={`grid h-10 w-10 place-items-center rounded-full border-2 text-[10px] font-black shadow-xl transition sm:h-11 sm:w-11 sm:text-xs ${active ? 'scale-110 border-amber-300 ring-4 ring-amber-300/25' : 'group-hover:-translate-y-1'} ${kind === 'light' ? 'border-white bg-slate-100 text-slate-900' : 'border-slate-600 bg-[#101512] text-white'}`}>{avatar(participant)}</span>
+          <UserAvatar value={avatar(participant)} fallback="J" className={`h-10 w-10 rounded-full border-2 text-[10px] shadow-xl transition sm:h-11 sm:w-11 sm:text-xs ${active ? 'scale-110 border-amber-300 ring-4 ring-amber-300/25' : 'group-hover:-translate-y-1'} ${kind === 'light' ? 'border-white' : 'border-slate-600'}`} />
           {mvpParticipantId === participant.id && <span className="absolute -top-2 right-[calc(50%-23px)] text-xs">⭐</span>}
-          <span className="mt-1 max-w-16 truncate rounded-md bg-black/50 px-1.5 py-0.5 text-[8px] font-bold text-white backdrop-blur-sm sm:max-w-20 sm:text-[9px]">{name(participant)}</span>
-          <span className="mt-0.5 text-[8px] font-bold text-white/65">{playerStats?.goals ?? 0}G · {playerStats?.assists ?? 0}A</span>
+          <span className="mt-1 max-w-20 truncate rounded-md border border-white/15 bg-[#06130f]/95 px-2 py-1 text-[9px] font-extrabold text-white shadow-lg backdrop-blur-sm sm:max-w-24 sm:text-[10px]">{name(participant)}</span>
+          <span className="mt-0.5 rounded bg-[#06130f]/90 px-1.5 py-0.5 text-[9px] font-extrabold text-white shadow-md">{playerStats?.goals ?? 0}G · {playerStats?.assists ?? 0}A</span>
         </button>
       })}
     </div>
@@ -53,7 +54,7 @@ export function MatchPitch({ participants, user, entries, guestStats, mvpPartici
       <div className="pointer-events-none absolute left-1/2 top-3 h-6 w-[20%] -translate-x-1/2 border-x-2 border-b-2 border-white/40" />
       <div className="pointer-events-none absolute bottom-3 left-1/2 h-16 w-[44%] -translate-x-1/2 border-2 border-b-0 border-white/50" />
       <div className="pointer-events-none absolute bottom-3 left-1/2 h-6 w-[20%] -translate-x-1/2 border-x-2 border-t-2 border-white/40" />
-      <div className="relative z-10 flex h-full flex-col justify-between">{renderTeam('dark')}<div className="px-4 text-center text-[9px] font-black uppercase tracking-[.25em] text-white/50">Oscuro · Claro</div>{renderTeam('light')}</div>
+      <div className="relative z-10 flex h-full flex-col justify-between">{renderTeam('dark')}<div className="relative z-10 mx-5 rounded-full border border-white/15 bg-[#06130f]/80 px-4 py-1 text-center text-[9px] font-black uppercase tracking-[.25em] text-white shadow-lg">Oscuro · Claro</div>{renderTeam('light')}</div>
     </div>
   </div>
 }

@@ -5,6 +5,7 @@ import type { Group, RankingPlayer, RankingTab } from '../types'
 import { isAllScope, isPersonalScope } from '../utils/scopes'
 import { sortRankings } from '../utils/stats'
 import { worldCupStageLabels } from '../utils/worldCup'
+import { UserAvatar } from '../components/UserAvatar'
 
 const tabs: { id: RankingTab; label: string }[] = [
   { id: 'goals', label: 'Goles' },
@@ -48,7 +49,7 @@ export function RankingsPage({ group, players }: { group: Group; players: Rankin
       <section className="space-y-2.5">
         {sorted.map((player, index) => <div key={player.id} className={`flex items-center gap-3 rounded-2xl border p-3.5 transition ${player.isCurrentUser ? 'border-emerald-500/50 bg-emerald-500/[0.08]' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]'}`}>
           <div className={`w-7 text-center text-sm font-black ${index < 3 ? 'text-emerald-500' : 'text-slate-400'}`}>{index + 1}</div>
-          <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-full text-xs font-black text-white ${player.accent}`}>{player.initials}</div>
+          <UserAvatar value={player.initials} fallback={player.name.slice(0, 2).toUpperCase()} className={`h-11 w-11 rounded-full text-xs text-white ${player.accent}`} />
           <div className="min-w-0 flex-1"><div className="truncate font-bold">{player.name} {player.isCurrentUser && <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500">Vos</span>}</div><div className="mt-0.5 text-xs text-slate-400">{player.wins}V · {player.draws}E · {player.losses}D</div></div>
           <div className="text-right"><div className="font-black tabular-nums">{rankingValue(player, tab)}</div><div className="mt-0.5 text-[10px] text-slate-400">{rankingDetail(player, tab)}</div>{index < 3 && <div className="mt-0.5 text-[10px] uppercase tracking-wider text-slate-400">Top {index + 1}</div>}</div>
         </div>)}

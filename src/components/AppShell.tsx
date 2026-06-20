@@ -5,6 +5,7 @@ import { GroupSelector } from './GroupSelector'
 import { CalendarIcon, HomeIcon, MoonIcon, PlusCircleIcon, SunIcon, TrophyIcon, UserIcon, UsersIcon } from './icons'
 import { isAllScope, isPersonalScope } from '../utils/scopes'
 import { appVersion } from '../config/appVersion'
+import { UserAvatar } from './UserAvatar'
 
 const desktopItems = [
   { page: 'home' as const, label: 'Inicio', icon: HomeIcon },
@@ -52,7 +53,7 @@ export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGro
           <div className="min-w-0 flex-1 lg:flex-none"><GroupSelector activeGroup={group} groups={groups} onSelect={onSelectGroup} /></div>
           <div className="ml-auto flex items-center gap-2">
             <button onClick={onTheme} aria-label={dark ? 'Activar modo claro' : 'Activar modo oscuro'} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:text-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">{dark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}</button>
-            <button onClick={() => onNavigate('profile')} aria-label="Abrir mi perfil" title="Mi perfil" className="grid h-10 min-w-10 place-items-center rounded-full bg-emerald-500 px-2 text-sm font-extrabold text-ink transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50">{user.avatar || user.initials}</button>
+            <button onClick={() => onNavigate('profile')} aria-label="Abrir mi perfil" title="Mi perfil" className="rounded-full transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><UserAvatar value={user.avatar} fallback={user.initials} className="h-10 w-10 rounded-full text-sm" /></button>
           </div>
         </div>
       </header>

@@ -55,6 +55,7 @@ export function authErrorMessage(reason: unknown): string {
   if (status === 429 || normalized.includes('rate limit') || normalized.includes('too many requests') || normalized.includes('over_email_send_rate_limit')) return 'Demasiados intentos. Esperá unos minutos y volvé a probar.'
   if (normalized.includes('position') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/004_add_profile_position.sql.'
   if ((normalized.includes('default_match_type') || normalized.includes('default_football_format')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/009_add_stat_entry_context.sql.'
+  if (normalized.includes('profiles_default_football_format_check')) return 'Falta ejecutar supabase/patches/010_expand_stat_football_formats.sql.'
   if (status >= 500 || normalized.includes('internal server error') || normalized.includes('unexpected_failure')) return 'Supabase tuvo un error interno. Probá nuevamente en unos minutos.'
   return rawMessage.trim() && rawMessage.trim() !== '{}' ? rawMessage.trim() : 'No pudimos completar la operación. Probá nuevamente.'
 }

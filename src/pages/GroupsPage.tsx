@@ -3,6 +3,8 @@ import { CheckIcon, CopyIcon, PlusCircleIcon, UsersIcon } from '../components/ic
 import { PageTitle } from '../components/PageTitle'
 import type { Group, GroupMemberView } from '../types'
 import { createGroupInviteLink } from '../utils/groups'
+import { defaultGroupEmoji, groupEmojiOptions } from '../data/groupEmojiOptions'
+import { UserAvatar } from '../components/UserAvatar'
 
 interface Props {
   groups: Group[]
@@ -14,9 +16,9 @@ interface Props {
   membersLoading?: boolean
   loadError?: string
   onSelectGroup: (group: Group) => void
-  onCreateGroup: (name: string) => Group | Promise<Group>
+  onCreateGroup: (name: string, emoji?: string) => Group | Promise<Group>
   onJoinGroup: (code: string) => Group | Promise<Group>
-  onUpdateGroup: (id: string, values: Partial<Pick<Group, 'name'>>) => void | Promise<void>
+  onUpdateGroup: (id: string, values: Partial<Pick<Group, 'name' | 'emoji'>>) => void | Promise<void>
 }
 
 export function GroupsPage({ groups, currentGroup, members = [], currentUserId, remoteMode = false, loading = false, membersLoading = false, loadError = '', onSelectGroup, onCreateGroup, onJoinGroup, onUpdateGroup }: Props) {
@@ -26,10 +28,11 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [emoji, setEmoji] = useState(defaultGroupEmoji)
   const currentMembership = members.find(member => member.userId === currentUserId)
   const canEdit = !remoteMode || currentMembership?.role === 'owner' || currentMembership?.role === 'admin'
 
-  const open = (nextMode: typeof mode, group?: Group) => { setMode(nextMode); setEditing(group ?? null); setValue(group?.name ?? ''); setError('') }
+  const open = (nextMode: typeof mode, group?: Group) => { setMode(nextMode); setEditing(group ?? null); setValue(group?.name ?? ''); setEmoji(group?.emoji || defaultGroupEmoji); setError('') }
   const copy = (group: Group) => {
     void navigator.clipboard?.writeText(createGroupInviteLink(group.code, window.location.origin))
     setCopied(group.id)
@@ -40,9 +43,9 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
     setSubmitting(true)
     setError('')
     try {
-      if (mode === 'create') await onCreateGroup(value)
+      if (mode === 'create') await onCreateGroup(value, emoji)
       if (mode === 'join') await onJoinGroup(value)
-      if (mode === 'edit' && editing) await onUpdateGroup(editing.id, { name: value.trim() })
+      if (mode === 'edit' && editing) await onUpdateGroup(editing.id, { name: value.trim(), emoji })
       open('list')
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'No pudimos completar la acción.')
@@ -64,7 +67,7 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
             const active = group.id === currentGroup?.id
             return <div key={group.id} className={`flex items-center gap-3 rounded-2xl border p-3 transition ${active ? 'border-emerald-500/50 bg-emerald-500/[0.07]' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]'}`}>
               <button onClick={() => onSelectGroup(group)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-slate-100 text-xl dark:bg-white/10">{group.emoji}</div>
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-slate-100 text-2xl dark:bg-white/10">{group.emoji || defaultGroupEmoji}</div>
                 <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="truncate font-bold">{group.name}</span>{active && <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-ink">Activo</span>}</div><div className="mt-1 text-xs text-slate-400">{group.memberCount} jugadores · Código {group.code}</div></div>
               </button>
               <button onClick={() => copy(group)} aria-label={`Copiar invitación de ${group.name}`} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 dark:border-white/10">{copied === group.id ? <CheckIcon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}</button>
@@ -73,7 +76,7 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
           })}
         </section>
 
-        {currentGroup && <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.04]"><div className="flex items-center justify-between"><h3 className="font-extrabold">Miembros</h3><span className="text-xs text-slate-400">{currentGroup.memberCount}</span></div>{membersLoading ? <p className="mt-4 text-sm text-slate-400">Cargando miembros...</p> : <div className="mt-4 grid gap-2 sm:grid-cols-2">{members.map(member => <div key={member.id} className="flex items-center gap-3 rounded-xl bg-slate-100 p-3 dark:bg-white/5"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500 text-xs font-black text-ink">{member.avatar || member.name.slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{member.name}</span><span className="block truncate text-xs text-slate-400">@{member.handle}</span></span><span className="text-[9px] font-bold uppercase text-emerald-500">{member.role}</span></div>)}{members.length === 0 && <p className="text-sm text-slate-400">No hay miembros para mostrar.</p>}</div>}</section>}
+        {currentGroup && <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.04]"><div className="flex items-center justify-between"><h3 className="font-extrabold">Miembros</h3><span className="text-xs text-slate-400">{currentGroup.memberCount}</span></div>{membersLoading ? <p className="mt-4 text-sm text-slate-400">Cargando miembros...</p> : <div className="mt-4 grid gap-2 sm:grid-cols-2">{members.map(member => <div key={member.id} className="flex items-center gap-3 rounded-xl bg-slate-100 p-3 dark:bg-white/5"><UserAvatar value={member.avatar} fallback={member.name.slice(0, 2).toUpperCase()} className="h-10 w-10 rounded-xl text-xs" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{member.name}</span><span className="block truncate text-xs text-slate-400">@{member.handle}</span></span><span className="text-[9px] font-bold uppercase text-emerald-500">{member.role}</span></div>)}{members.length === 0 && <p className="text-sm text-slate-400">No hay miembros para mostrar.</p>}</div>}</section>}
       </div>
 
       <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.04]">
@@ -87,6 +90,7 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
           <p className="mt-1 text-sm text-slate-400">{mode === 'join' ? 'Pegá el código o link de invitación.' : 'Elegí un nombre corto y reconocible.'}</p>
           <label className="mt-4 block text-xs font-bold text-slate-400">{mode === 'join' ? 'Código' : 'Nombre del grupo'}</label>
           <input autoFocus value={value} disabled={submitting} onChange={event => setValue(event.target.value)} placeholder={mode === 'join' ? 'CEF-AB12CD34 o https://...' : 'Fútbol del martes'} className={`mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 disabled:opacity-50 dark:border-white/10 ${mode === 'join' ? 'font-mono tracking-wide' : ''}`} />
+          {mode !== 'join' && <div className="mt-4"><p className="text-xs font-bold text-slate-400">Emoji del grupo</p><div className="mt-2 grid grid-cols-8 gap-1.5">{groupEmojiOptions.map(option => <button type="button" key={option} onClick={() => setEmoji(option)} aria-label={`Emoji ${option}`} aria-pressed={emoji === option} className={`grid aspect-square place-items-center rounded-xl border text-xl transition ${emoji === option ? 'border-emerald-500 bg-emerald-500/15 ring-1 ring-emerald-500' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/5'}`}>{option}</button>)}</div></div>}
           {error && <p className="mt-2 text-xs font-bold text-rose-500">{error}</p>}
           <button onClick={submit} disabled={submitting} className="mt-4 min-h-12 w-full rounded-xl bg-emerald-500 font-bold text-ink disabled:opacity-50">{submitting ? mode === 'create' ? 'Creando grupo...' : mode === 'join' ? 'Uniéndome...' : 'Guardando...' : mode === 'create' ? 'Crear y activar' : mode === 'join' ? 'Unirme y activar' : 'Guardar nombre'}</button>
         </>}
