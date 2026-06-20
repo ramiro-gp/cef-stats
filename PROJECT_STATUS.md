@@ -1,8 +1,8 @@
-# Estado técnico de CEF Stats
+# Estado técnico de Fulbo Stats
 
 ## Qué funciona hoy
 
-CEF Stats es un prototipo React + Vite + TypeScript + Tailwind, mobile first, con dark mode predeterminado. En modo cuenta usa Supabase Auth, perfiles, grupos, stats, partidos, participantes e invitados. El modo local conserva su store de `localStorage`.
+Fulbo Stats es un prototipo React + Vite + TypeScript + Tailwind, mobile first, con dark mode predeterminado. En modo cuenta usa Supabase Auth, perfiles, grupos, stats, partidos, participantes e invitados. El modo local conserva su store de `localStorage`.
 
 Incluye perfil y handle editables, grupos locales, grupo activo, carga rápida, rankings, feed, banner, Mundial Personal, partidos, equipos, cupos, invitados, vinculación por código/link, score, votos MVP, comentarios cortos, stats de invitados y cancha visual.
 

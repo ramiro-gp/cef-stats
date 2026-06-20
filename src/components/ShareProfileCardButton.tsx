@@ -4,7 +4,15 @@ import type { UserTotals } from '../utils/stats'
 import { createProfileCardPng } from '../utils/profileCard'
 
 function download(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.style.display = 'none'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
 export function ShareProfileCardButton({ user, totals }: { user: User; totals: UserTotals }) {
@@ -15,10 +23,14 @@ export function ShareProfileCardButton({ user, totals }: { user: User; totals: U
     setStatus('generating'); setError('')
     try {
       const blob = await createProfileCardPng(user, totals)
-      const filename = `cef-stats-${user.username.replace(/^@/, '') || 'jugador'}.png`
+      const handle = user.username.replace(/^@/, '').trim()
+      const safeHandle = handle.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'jugador'
+      const filename = `fulbo-stats-${safeHandle}.png`
       const file = new File([blob], filename, { type: 'image/png' })
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        try { await navigator.share({ title: 'Mi tarjeta CEF Stats', text: 'Mis números en CEF Stats ⚽', files: [file] }) }
+      let canShareFile = false
+      try { canShareFile = typeof navigator.share === 'function' && Boolean(navigator.canShare?.({ files: [file] })) } catch { canShareFile = false }
+      if (canShareFile) {
+        try { await navigator.share({ title: 'Mi tarjeta Fulbo Stats', text: 'Mis números en Fulbo Stats ⚽', files: [file] }) }
         catch (reason) { if (reason instanceof DOMException && reason.name === 'AbortError') throw reason; download(blob, filename) }
       } else download(blob, filename)
       setStatus('done'); window.setTimeout(() => setStatus('idle'), 1800)

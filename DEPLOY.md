@@ -1,4 +1,4 @@
-# Deploy de CEF Stats en Vercel
+# Deploy de Fulbo Stats en Vercel
 
 Esta guía cubre el deploy actual: frontend React/Vite en Vercel; Auth, profiles, grupos, membresías, stats y partidos en Supabase.
 
@@ -76,7 +76,7 @@ git status --short
 Antes del commit, comprobar que `.env.local`, `dist`, `node_modules` y `.vercel` no aparecen. `.env.example` sí debe aparecer.
 
 ```bash
-git commit -m "Prepare CEF Stats for Vercel deploy"
+git commit -m "Prepare Fulbo Stats for Vercel deploy"
 git branch -M main
 git remote add origin https://github.com/TU-USUARIO/TU-REPO.git
 git push -u origin main
@@ -96,7 +96,7 @@ El primer comando no debe devolver nada; el segundo debe indicar una regla de `.
 1. En Vercel, elegir **Add New → Project**.
 2. Importar el repositorio de GitHub.
 3. Confirmar framework **Vite**.
-4. Si CEF Stats está en una subcarpeta, seleccionar esa carpeta como **Root Directory**.
+4. Si Fulbo Stats está en una subcarpeta, seleccionar esa carpeta como **Root Directory**.
 5. La configuración versionada en `vercel.json` usa:
    - Install: `pnpm install --frozen-lockfile`
    - Build: `pnpm build`

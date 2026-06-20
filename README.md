@@ -1,4 +1,4 @@
-# CEF Stats
+# Fulbo Stats
 
 Prototipo funcional mobile-first para cargar estadísticas post partido, comparar rankings y jugar un Mundial Personal. En modo cuenta, Auth, perfiles, grupos, stats y partidos viven en Supabase. El modo local conserva su implementación en `localStorage` por compatibilidad.
 

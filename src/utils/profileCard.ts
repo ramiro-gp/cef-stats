@@ -3,8 +3,23 @@ import type { User } from '../types'
 import type { UserTotals } from './stats'
 import { avatarSvgDataUrl } from './avatarSvg'
 
+function roundedRectPath(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+  const safeRadius = Math.min(radius, width / 2, height / 2)
+  context.beginPath()
+  context.moveTo(x + safeRadius, y)
+  context.lineTo(x + width - safeRadius, y)
+  context.quadraticCurveTo(x + width, y, x + width, y + safeRadius)
+  context.lineTo(x + width, y + height - safeRadius)
+  context.quadraticCurveTo(x + width, y + height, x + width - safeRadius, y + height)
+  context.lineTo(x + safeRadius, y + height)
+  context.quadraticCurveTo(x, y + height, x, y + height - safeRadius)
+  context.lineTo(x, y + safeRadius)
+  context.quadraticCurveTo(x, y, x + safeRadius, y)
+  context.closePath()
+}
+
 function roundedRect(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
-  context.beginPath(); context.roundRect(x, y, width, height, radius); context.fill()
+  roundedRectPath(context, x, y, width, height, radius); context.fill()
 }
 
 function loadImage(source: string): Promise<HTMLImageElement> {
@@ -21,22 +36,23 @@ export async function createProfileCardPng(user: User, totals: UserTotals): Prom
   gradient.addColorStop(0, '#07110e'); gradient.addColorStop(.55, '#0d2b21'); gradient.addColorStop(1, '#064e3b')
   context.fillStyle = gradient; context.fillRect(0, 0, 1080, 1350)
   context.fillStyle = 'rgba(52,211,153,.12)'; context.beginPath(); context.arc(930, 120, 300, 0, Math.PI * 2); context.fill()
-  context.fillStyle = '#34d399'; context.font = '900 58px Inter, Arial, sans-serif'; context.fillText('CEF STATS', 80, 105)
+  context.fillStyle = '#34d399'; context.font = '900 58px Inter, Arial, sans-serif'; context.fillText('FULBO STATS', 80, 105)
   context.fillStyle = '#94a3b8'; context.font = '600 28px Inter, Arial, sans-serif'; context.fillText('MI TARJETA DE JUGADOR', 80, 150)
 
   const avatarOption = findAvatarOption(user.avatar)
   if (avatarOption) {
     const image = await loadImage(avatarSvgDataUrl(avatarOption))
-    context.save(); context.beginPath(); context.roundRect(390, 220, 300, 300, 64); context.clip(); context.drawImage(image, 390, 220, 300, 300); context.restore()
+    context.save(); roundedRectPath(context, 390, 220, 300, 300, 64); context.clip(); context.drawImage(image, 390, 220, 300, 300); context.restore()
   } else {
-    context.fillStyle = '#34d399'; context.beginPath(); context.roundRect(390, 220, 300, 300, 64); context.fill()
+    context.fillStyle = '#34d399'; roundedRect(context, 390, 220, 300, 300, 64)
     const fallbackAvatar = user.avatar?.startsWith('avatar:') ? user.initials : user.avatar || user.initials
     context.fillStyle = '#07110e'; context.font = '900 104px Inter, Arial, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(fallbackAvatar, 540, 370); context.textAlign = 'left'; context.textBaseline = 'alphabetic'
   }
 
   context.textAlign = 'center'; context.fillStyle = '#f8fafc'; context.font = '900 58px Inter, Arial, sans-serif'; context.fillText(user.name, 540, 610, 900)
-  context.fillStyle = '#34d399'; context.font = '700 30px Inter, Arial, sans-serif'; context.fillText(`@${user.username.replace(/^@/, '')}`, 540, 658)
-  context.fillStyle = '#cbd5e1'; context.font = '600 28px Inter, Arial, sans-serif'; context.fillText(user.position || 'Sin posición', 540, 704)
+  const handle = user.username.replace(/^@/, '').trim()
+  if (handle) { context.fillStyle = '#34d399'; context.font = '700 30px Inter, Arial, sans-serif'; context.fillText(`@${handle}`, 540, 658) }
+  if (user.position) { context.fillStyle = '#cbd5e1'; context.font = '600 28px Inter, Arial, sans-serif'; context.fillText(user.position, 540, 704) }
 
   const stats = [{ label: 'PARTIDOS', value: totals.matches }, { label: 'GOLES', value: totals.goals }, { label: 'ASISTENCIAS', value: totals.assists }]
   stats.forEach((stat, index) => {
