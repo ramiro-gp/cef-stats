@@ -107,6 +107,6 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
       {!result && <p className="-mt-2 text-center text-xs text-slate-400">Elegí un resultado para poder guardar</p>}
       {!contextId && <p className="-mt-2 text-center text-xs text-slate-400">Elegí dónde guardar la carga.</p>}
     </div>
-    {linking && <MatchCodePickerSheet matches={matches} groups={groups} entries={entries} userId={user.id} onSelect={selection => { setLinked(selection); setContextId(selection.match.groupId); if (selection.automaticResult) setResult(selection.automaticResult); if (formatOptions.includes(selection.match.format as StatFootballFormat)) setFootballFormat(selection.match.format as StatFootballFormat) }} onClose={() => setLinking(false)} />}
+    {linking && <MatchCodePickerSheet matches={matches} groups={groups} entries={entries} userId={user.id} onSelect={selection => { setLinked(selection); setContextId(selection.match.groupId || personalContextId); if (selection.automaticResult) setResult(selection.automaticResult); if (formatOptions.includes(selection.match.format as StatFootballFormat)) setFootballFormat(selection.match.format as StatFootballFormat) }} onClose={() => setLinking(false)} />}
   </div>
 }

@@ -31,7 +31,7 @@ interface Props {
   onInviteConsumed?: (matchId?: string) => void
   onOpenMatch?: (matchId: string) => void
   onCloseMatch?: () => void
-  onCreate: (values: { title: string; scheduledAt: string; format?: MatchFormat; groupId?: string }) => Match | Promise<Match>
+  onCreate: (values: { title: string; scheduledAt: string; format?: MatchFormat; groupId?: string | null }) => Match | Promise<Match>
   onJoinTeam: (matchId: string, team: MatchTeam) => void | Promise<unknown>
   onLeave: (matchId: string) => void | Promise<unknown>
   onScore: (matchId: string, score: MatchScore) => void | Promise<unknown>
@@ -71,9 +71,9 @@ export function MatchesPage({ group, user, matches, entries, initialMatchId = nu
   }, [initialInviteCode])
   const selectedId = initialMatchId ?? localSelectedId
   const selected = matches.find(match => match.id === selectedId)
-  const allowCreate = !remoteMode || creationGroups.length > 0
+  const allowCreate = true
   const defaultCreationGroupId = creationGroups.some(item => item.id === group.id) ? group.id : ''
-  const groupLabel = (match: Match) => match.groupName?.trim() || (match.groupId === group.id ? group.name : 'Grupo anfitrión')
+  const groupLabel = (match: Match) => !match.groupId ? 'Sin grupo' : match.groupName?.trim() || (match.groupId === group.id ? group.name : 'Grupo anfitrión')
   const pendingTeam = (match: Match) => match.participants.some(participant => participant.userId === user.id && !participant.team)
   const openMatch = (matchId: string) => { if (onOpenMatch) onOpenMatch(matchId); else setLocalSelectedId(matchId) }
   const closeMatch = () => { setActiveParticipant(null); if (onCloseMatch) onCloseMatch(); else setLocalSelectedId(null) }

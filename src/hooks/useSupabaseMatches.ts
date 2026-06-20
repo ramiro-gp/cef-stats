@@ -65,9 +65,8 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     }
   }, [])
 
-  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat; groupId?: string }) => {
-    const targetGroupId = values.groupId ?? groupId
-    if (!targetGroupId) return Promise.reject(new Error('Elegí un grupo real para crear un partido.'))
+  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat; groupId?: string | null }) => {
+    const targetGroupId = values.groupId === undefined ? groupId : values.groupId
     return mutate(async () => upsert(await supabaseMatchRepository.createMatch(targetGroupId, values)))
   }, [groupId, mutate, upsert])
 
@@ -136,7 +135,7 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     const existing = entries.find(entry => entry.matchId === matchId && entry.userId === userId)
     const saved = existing
       ? await supabaseRepository.updateStatEntry(existing.id, userId, values)
-      : await supabaseRepository.createStatEntry({ type: 'group', userId, groupId: match.groupId }, { ...values, matchId })
+      : await supabaseRepository.createStatEntry(match.groupId ? { type: 'group', userId, groupId: match.groupId } : { type: 'personal', userId }, { ...values, matchId })
     setEntries(current => existing ? current.map(entry => entry.id === saved.id ? saved : entry) : [saved, ...current])
     return saved
   }), [entries, matches, mutate, userId])

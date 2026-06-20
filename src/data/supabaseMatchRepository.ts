@@ -4,7 +4,7 @@ import { extractInviteCode } from '../utils/matches'
 
 interface MatchRow {
   id: string
-  host_group_id: string
+  host_group_id: string | null
   title: string
   format: MatchFormat
   invite_code: string
@@ -83,6 +83,7 @@ function matchError(message: string): string {
   if (normalized.includes('match_mvp_votes') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/005_add_match_mvp_votes.sql.'
   if ((normalized.includes('list_my_matches') || normalized.includes('get_match_group_labels')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/007_allow_external_match_participants.sql.'
   if (normalized.includes('attend_match_by_invite') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/008_allow_match_participants_without_team.sql.'
+  if (normalized.includes('host_group_id') && normalized.includes('not-null')) return 'Falta ejecutar supabase/patches/012_allow_matches_without_group.sql.'
   if (normalized.includes('matches') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
   if (normalized.includes('invalid match invite code')) return 'No encontramos un partido con ese código.'
   if (normalized.includes('group membership required')) return 'Necesitás pertenecer al grupo para crear un partido.'
@@ -146,7 +147,7 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
     })
     return {
       id: row.id,
-      groupId: row.host_group_id,
+      groupId: row.host_group_id ?? '',
       groupName: groupLabels.get(row.id),
       title: row.title,
       format: row.format,
@@ -209,7 +210,7 @@ export const supabaseMatchRepository = {
     return result.data ? this.getMatch(result.data as string) : null
   },
 
-  async createMatch(groupId: string, values: { title: string; scheduledAt: string; format?: MatchFormat }): Promise<Match> {
+  async createMatch(groupId: string | null, values: { title: string; scheduledAt: string; format?: MatchFormat }): Promise<Match> {
     const result = await client().rpc('create_match_with_invite', { p_host_group_id: groupId, p_title: values.title.trim(), p_format: values.format ?? 'F5', p_scheduled_at: values.scheduledAt })
     if (result.error) throw new Error(matchError(result.error.message))
     const row = (Array.isArray(result.data) ? result.data[0] : result.data) as MatchRow | undefined

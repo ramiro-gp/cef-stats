@@ -13,8 +13,10 @@ interface CreateMatchValues {
   title: string
   scheduledAt: string
   format?: MatchFormat
-  groupId?: string
+  groupId?: string | null
 }
+
+const NO_GROUP_VALUE = '__no_group__'
 
 export function MatchCreateSheet({ groups, defaultGroupId = '', onCreate, onClose }: { groups?: Group[]; defaultGroupId?: string; onCreate: (values: CreateMatchValues) => Match | Promise<Match>; onClose: () => void }) {
   const [title, setTitle] = useState('Partido de hoy')
@@ -24,11 +26,11 @@ export function MatchCreateSheet({ groups, defaultGroupId = '', onCreate, onClos
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const create = async () => {
-    if (groups && !groupId) { setError('Elegí el grupo al que pertenece el partido.'); return }
+    if (groups && !groupId) { setError('Elegí un grupo o Sin grupo.'); return }
     setSaving(true)
     setError('')
     try {
-      await onCreate({ title: title.trim() || 'Partido de hoy', scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(), format, groupId: groupId || undefined })
+      await onCreate({ title: title.trim() || 'Partido de hoy', scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : new Date().toISOString(), format, groupId: groups ? (groupId === NO_GROUP_VALUE ? null : groupId) : undefined })
       onClose()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'No pudimos crear el partido.')
@@ -38,7 +40,7 @@ export function MatchCreateSheet({ groups, defaultGroupId = '', onCreate, onClos
   }
 
   return <ModalSheet title="+ Partido" onClose={onClose}>
-    {groups && <label className="mb-4 block"><span className="text-xs font-bold text-slate-500">Grupo del partido</span><select value={groupId} onChange={event => setGroupId(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí un grupo</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select><span className="mt-2 block text-[11px] leading-5 text-slate-400">“Sin grupo” todavía no está disponible porque los partidos requieren un grupo anfitrión.</span></label>}
+    {groups && <label className="mb-4 block"><span className="text-xs font-bold text-slate-500">Grupo anfitrión</span><select value={groupId} onChange={event => setGroupId(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí una opción</option><option value={NO_GROUP_VALUE}>Sin grupo</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select><span className="mt-2 block text-[11px] leading-5 text-slate-400">Usá Sin grupo para partidos mezclados. El link suma participantes al partido, no a un grupo.</span></label>}
     <label className="block"><span className="text-xs font-bold text-slate-500">Nombre opcional</span><input value={title} onChange={event => setTitle(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
     <label className="mt-4 block"><span className="text-xs font-bold text-slate-500">Fecha</span><input type="datetime-local" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
     <div className="mt-4"><span className="text-xs font-bold text-slate-500">Formato</span><div className="mt-2 grid grid-cols-5 gap-2">{formats.map(item => <button key={item} onClick={() => setFormat(item)} className={`min-h-11 rounded-xl text-xs font-bold ${format === item ? 'bg-emerald-500 text-ink' : 'border border-slate-200 dark:border-white/10'}`}>{item}</button>)}</div></div>

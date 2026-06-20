@@ -14,7 +14,7 @@ export function LinkEntrySheet({ entry, matches, groups, allEntries, onLink, onE
   const [linking, setLinking] = useState(false)
   const calculated = match && team ? getMatchResultForTeam(match.score, team) : null
   const duplicateEntry = match ? allEntries.find(item => item.id !== entry.id && item.userId === entry.userId && item.matchId === match.id) : undefined
-  const groupName = match ? groups.find(group => group.id === match.groupId)?.name ?? 'Grupo anfitrión' : ''
+  const groupName = match ? (match.groupId ? groups.find(group => group.id === match.groupId)?.name ?? 'Grupo anfitrión' : 'Sin grupo') : ''
   const link = async () => {
     if (!match || !team) return
     if (calculated && calculated !== entry.result && !confirmResult) { setConfirmResult(true); return }
