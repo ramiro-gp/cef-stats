@@ -52,7 +52,7 @@ export function LoginPage({ configured, loading, authError, pendingGroupCode = '
     <button type="button" onClick={() => { setMode('welcome'); setError(''); setMessage('') }} className="mb-6 min-h-10 text-sm font-bold text-emerald-400">← Volver</button>
     <p className="text-xs font-bold uppercase tracking-widest text-emerald-400">Cuenta Supabase</p>
     <h1 className="mt-2 text-3xl font-black">{mode === 'login' ? 'Entrar' : 'Crear cuenta'}</h1>
-    <p className="mt-2 text-sm leading-6 text-slate-400">Tu cuenta, grupos y stats quedan disponibles online. Los partidos todavía se guardan en este dispositivo.</p>
+    <p className="mt-2 text-sm leading-6 text-slate-400">Tu cuenta, grupos, stats y partidos quedan disponibles online.</p>
     {pendingGroupCode && <div className="mt-5 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-4 text-sm leading-6 text-emerald-200">Tenés una invitación pendiente al grupo <strong>{pendingGroupCode}</strong>. Entrá o registrate para unirte.</div>}
     {pendingMatchCode && <div className="mt-5 rounded-2xl border border-sky-400/25 bg-sky-400/10 p-4 text-sm leading-6 text-sky-200">Tenés una invitación pendiente al partido <strong>{pendingMatchCode}</strong>. Entrá o registrate para abrirlo.</div>}
     {!configured && <div className="mt-5 rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 text-sm leading-6 text-amber-200">{SUPABASE_NOT_CONFIGURED_MESSAGE}</div>}

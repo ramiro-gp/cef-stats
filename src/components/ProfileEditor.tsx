@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import type { LoadFormatPreference, LoadMatchTypePreference, PlayerPosition, User } from '../types'
-import { reservedMockHandles } from '../data/seedData'
 import { isValidHandle, normalizeHandle } from '../utils/identity'
 import { ModalSheet } from './ModalSheet'
 import { LoadPreferencesFields } from './LoadPreferencesFields'
@@ -22,13 +21,18 @@ export function ProfileEditor({ user, accountMode = false, onSave, onClose }: { 
     const cleanUsername = normalizeHandle(username)
     if (!name.trim()) { setError('El nombre es obligatorio.'); return }
     if (!isValidHandle(cleanUsername)) { setError('El @usuario debe tener 3–24 caracteres: letras, números, punto o guion bajo.'); return }
-    if (reservedMockHandles.includes(cleanUsername) && cleanUsername !== normalizeHandle(user.username)) { setError('Ese @usuario ya está usado en este prototipo.'); return }
     const fallbackInitials = name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
     setSaving(true)
-    const saveError = await onSave({ ...user, name: name.trim(), nickname: accountMode ? name.trim() : nickname.trim(), username: cleanUsername, avatar: avatar.trim() || fallbackInitials, initials: fallbackInitials, position, defaultMatchType, defaultFootballFormat })
-    setSaving(false)
-    if (saveError) { setError(saveError); return }
-    onClose()
+    setError('')
+    try {
+      const saveError = await onSave({ ...user, name: name.trim(), nickname: accountMode ? name.trim() : nickname.trim(), username: cleanUsername, avatar: avatar.trim() || fallbackInitials, initials: fallbackInitials, position, defaultMatchType, defaultFootballFormat })
+      if (saveError) { setError(saveError); return }
+      onClose()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'No pudimos guardar el perfil.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return <ModalSheet title="Editar perfil" onClose={onClose}>

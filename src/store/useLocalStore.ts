@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { appRepository } from '../data/appRepository'
+import { useCallback, useMemo, useState } from 'react'
 import { availableGroups, defaultGroup, defaultUser } from '../data/seedData'
 import type { AppState, Group, GroupMember, Match, MatchEvent, MatchFormat, MatchParticipant, MatchResult, MatchScore, MatchTeam, StatEntry, User } from '../types'
 import { createUniqueGroupCode, normalizeGroupCode } from '../utils/groups'
@@ -24,66 +23,9 @@ function freshInitialState(): AppState {
   }
 }
 
-function normalizeGroup(group: Group): Group {
-  const seededGroup = availableGroups.find(candidate => candidate.id === group.id)
-  return {
-    ...group,
-    emoji: group.emoji || '⚽',
-    spicyMode: true,
-    seeded: group.seeded ?? Boolean(seededGroup),
-  }
-}
-
-function normalizeMatch(match: Match): Match {
-  const participants = (match.participants ?? []).map((participant, index) => {
-    const legacy = participant as MatchParticipant & { joinedAt?: string }
-    return {
-      ...participant,
-      id: participant.id ?? `participant-${match.id}-${participant.userId ?? index}`,
-      matchId: participant.matchId ?? match.id,
-      type: participant.type ?? (participant.userId ? 'registered_user' : 'guest'),
-      createdAt: participant.createdAt ?? legacy.joinedAt ?? match.createdAt,
-    }
-  })
-  const legacyMvpParticipant = match.mvpUserId ? participants.find(participant => participant.userId === match.mvpUserId)?.id : undefined
-  return { ...match, participants, guestStats: match.guestStats ?? [], mvpParticipantId: match.mvpParticipantId ?? legacyMvpParticipant }
-}
-
-function loadState(): AppState {
-  const fallback = freshInitialState()
-  try {
-    const parsed = appRepository.load()
-    if (!parsed) return fallback
-    const storedGroups = Array.isArray(parsed.groups) ? parsed.groups.map(normalizeGroup) : availableGroups.map(group => ({ ...group }))
-    const legacyGroup = parsed.group ? normalizeGroup(parsed.group) : null
-    const groups = legacyGroup && !storedGroups.some(group => group.id === legacyGroup.id) ? [legacyGroup, ...storedGroups] : storedGroups
-    const activeGroupId = parsed.activeGroupId ?? legacyGroup?.id ?? defaultGroup.id
-    const storedMembers = Array.isArray(parsed.groupMembers) ? parsed.groupMembers : []
-    const groupMembers = groups.reduce<GroupMember[]>((members, group) => {
-      if (members.some(member => member.groupId === group.id && member.userId === (parsed.user?.id ?? defaultUser.id))) return members
-      return [...members, { id: `member-${group.id}-${parsed.user?.id ?? defaultUser.id}`, groupId: group.id, userId: parsed.user?.id ?? defaultUser.id, role: group.id === defaultGroup.id ? 'owner' : 'member', joinedAt: '2026-06-17T00:00:00.000Z' }]
-    }, storedMembers)
-    return {
-      user: { ...defaultUser, ...parsed.user, username: normalizeHandle(parsed.user?.username ?? defaultUser.username), avatar: parsed.user?.avatar ?? parsed.user?.initials ?? defaultUser.avatar },
-      groups,
-      groupMembers,
-      activeGroupId: groups.some(group => group.id === activeGroupId) ? activeGroupId : groups[0]?.id ?? defaultGroup.id,
-      entries: Array.isArray(parsed.entries) ? parsed.entries : [],
-      matches: Array.isArray(parsed.matches) ? parsed.matches.map(normalizeMatch) : [],
-      matchEvents: Array.isArray(parsed.matchEvents) ? parsed.matchEvents : [],
-    }
-  } catch {
-    return fallback
-  }
-}
-
 export function useLocalStore() {
-  const [state, setState] = useState<AppState>(loadState)
+  const [state, setState] = useState<AppState>(freshInitialState)
   const group = getActiveGroup(state, defaultGroup)
-
-  useEffect(() => {
-    appRepository.save(state)
-  }, [state])
 
   const addEntry = useCallback((values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>, groupIdOverride?: string) => {
     const createdAt = new Date().toISOString()
@@ -289,12 +231,7 @@ export function useLocalStore() {
     return true
   }, [state.entries, state.matches])
 
-  const resetData = useCallback(() => {
-    appRepository.clear()
-    setState(freshInitialState())
-  }, [])
-
-  return useMemo(() => ({ ...state, group, addEntry, updateEntry, deleteEntry, resetData, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch }), [state, group, addEntry, updateEntry, deleteEntry, resetData, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch])
+  return useMemo(() => ({ ...state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch }), [state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch])
 }
 
 export type AddStatEntry = (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>) => StatEntry | Promise<StatEntry>

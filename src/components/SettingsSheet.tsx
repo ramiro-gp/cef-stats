@@ -24,10 +24,15 @@ export function SettingsSheet({ user, theme, onTheme, onSaveUser, onClose }: Pro
     if (saving) return
     setSaving(true)
     setError('')
-    const saveError = await onSaveUser({ ...user, position, defaultMatchType, defaultFootballFormat })
-    setSaving(false)
-    if (saveError) { setError(saveError); return }
-    onClose()
+    try {
+      const saveError = await onSaveUser({ ...user, position, defaultMatchType, defaultFootballFormat })
+      if (saveError) { setError(saveError); return }
+      onClose()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'No pudimos guardar los ajustes.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return <ModalSheet title="Ajustes" onClose={onClose}>

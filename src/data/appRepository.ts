@@ -1,25 +1,8 @@
-import type { AppState, Group, ThemeMode, ThemeSettings } from '../types'
-import { createJsonStorageAdapter, createStringStorageAdapter } from './localStorageAdapter'
+import type { ThemeMode, ThemeSettings } from '../types'
+import { createStringStorageAdapter } from './localStorageAdapter'
 
-export const APP_STORAGE_KEY = 'cef-stats-local-v1'
 export const THEME_STORAGE_KEY = 'cef-theme'
-
-export type PersistedAppState = Partial<AppState> & { group?: Group }
-
-export interface AppRepository {
-  load: () => PersistedAppState | null
-  save: (state: AppState) => void
-  clear: () => void
-}
-
-const appStorage = createJsonStorageAdapter<PersistedAppState>(APP_STORAGE_KEY)
 const themeStorage = createStringStorageAdapter(THEME_STORAGE_KEY)
-
-export const appRepository: AppRepository = {
-  load: appStorage.load,
-  save: appStorage.save,
-  clear: appStorage.clear,
-}
 
 export const themeSettingsRepository = {
   load(): ThemeSettings {

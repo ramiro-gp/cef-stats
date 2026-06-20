@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Match } from '../types'
-import { findMatchByCode } from '../utils/matches'
+import { findMatchByCode, isValidMatchCode } from '../utils/matches'
 
-export type MatchLookupStatus = 'idle' | 'searching' | 'found' | 'not_found'
+export type MatchLookupStatus = 'idle' | 'searching' | 'found' | 'not_found' | 'invalid'
 
 export function useMatchCodeLookup(matches: Match[]) {
   const [query, setQueryState] = useState('')
@@ -18,6 +18,7 @@ export function useMatchCodeLookup(matches: Match[]) {
   useEffect(() => {
     if (!query.trim()) return
     const timer = window.setTimeout(() => {
+      if (!isValidMatchCode(query)) { setStatus('invalid'); return }
       const found = findMatchByCode(matches, query)
       setMatch(found)
       setStatus(found ? 'found' : 'not_found')

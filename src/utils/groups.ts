@@ -1,10 +1,10 @@
 import type { Group } from '../types'
+import { createInviteToken } from './ids'
 
-export function createUniqueGroupCode(name: string, groups: Group[]): string {
-  const base = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]/g, '').trim().split(/\s+/).map(word => word.slice(0, 4)).join('-').toUpperCase().slice(0, 14) || 'GRUPO'
-  let code = base
-  let suffix = 2
-  while (groups.some(group => group.code.toUpperCase() === code)) code = `${base}-${suffix++}`
+export function createUniqueGroupCode(_name: string, groups: Group[]): string {
+  const existing = new Set(groups.map(group => group.code.toUpperCase()))
+  let code = `CEF-${createInviteToken()}`
+  while (existing.has(code)) code = `CEF-${createInviteToken()}`
   return code
 }
 

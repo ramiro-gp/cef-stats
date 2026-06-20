@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Match } from '../types'
-import { findMatchByCode } from '../utils/matches'
+import { findMatchByCode, isValidMatchCode } from '../utils/matches'
 import { ModalSheet } from './ModalSheet'
 
 interface Props {
@@ -20,6 +20,12 @@ export function MatchJoinSheet({ matches, remoteMode = false, initialValue = '',
   const initialSearchStarted = useRef(false)
   const performSearch = useCallback(async (value: string) => {
     if (!value.trim()) return null
+    if (!isValidMatchCode(value)) {
+      setMatch(null)
+      setStatus('not_found')
+      setError('El código o link no tiene un formato válido.')
+      return null
+    }
     setStatus('searching')
     setError('')
     try {
@@ -45,7 +51,7 @@ export function MatchJoinSheet({ matches, remoteMode = false, initialValue = '',
 
   return <ModalSheet title="Unirme con código" onClose={onClose}>
     <label className="text-xs font-bold text-slate-500">Código o link del partido</label>
-    <input autoFocus value={query} onChange={event => { setQuery(event.target.value); setMatch(null); setStatus('idle'); setError('') }} onKeyDown={event => { if (event.key === 'Enter') void search() }} placeholder="CEF-XXXXX o https://..." className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 font-mono outline-none focus:border-emerald-500 dark:border-white/10" />
+    <input autoFocus value={query} onChange={event => { setQuery(event.target.value); setMatch(null); setStatus('idle'); setError('') }} onKeyDown={event => { if (event.key === 'Enter') void search() }} placeholder="CEF-XXXXXXXXXXXX o https://..." className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 font-mono outline-none focus:border-emerald-500 dark:border-white/10" />
     <button onClick={() => void search()} disabled={!query.trim() || status === 'searching'} className="mt-3 min-h-11 w-full rounded-xl border border-emerald-500/30 text-sm font-bold text-emerald-500 disabled:opacity-40">{status === 'searching' ? 'Buscando...' : 'Buscar partido'}</button>
     <p className={`mt-3 text-sm leading-6 ${status === 'found' ? 'text-emerald-500' : status === 'not_found' ? 'text-amber-500' : 'text-slate-400'}`}>
       {status === 'searching' ? 'Buscando partido...' : status === 'found' ? `Encontramos: ${match?.title}` : status === 'not_found' ? error || (remoteMode ? 'No encontramos un partido con ese código o link.' : 'No encontramos ese partido en este dispositivo. Cuando los partidos estén online, este código va a funcionar entre usuarios.') : 'Pegá el código o link de invitación.'}

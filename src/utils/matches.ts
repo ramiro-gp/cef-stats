@@ -89,7 +89,8 @@ export function extractInviteCode(value: string): string {
 }
 
 export function isValidMatchCode(value: string): boolean {
-  return /^CEF-[A-Z0-9]{5}$/.test(extractInviteCode(value))
+  const code = extractInviteCode(value)
+  return /^CEF-[A-Z0-9]{5}$/.test(code) || /^CEF-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{12}$/.test(code)
 }
 
 export function findMatchByCode(matches: Match[], value: string): Match | null {

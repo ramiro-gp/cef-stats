@@ -1,6 +1,6 @@
 import { supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
 import type { Match, MatchComment, MatchFormat, MatchMvpVote, MatchParticipant, MatchScore, MatchTeam } from '../types'
-import { extractInviteCode } from '../utils/matches'
+import { extractInviteCode, isValidMatchCode } from '../utils/matches'
 
 interface MatchRow {
   id: string
@@ -194,6 +194,7 @@ export const supabaseMatchRepository = {
   },
 
   async lookupByInvite(value: string): Promise<Match | null> {
+    if (!isValidMatchCode(value)) return null
     const code = extractInviteCode(value)
     if (!code) return null
     const result = await client().rpc('get_match_by_invite', { p_invite_code: code })
@@ -203,6 +204,7 @@ export const supabaseMatchRepository = {
   },
 
   async attendByInvite(value: string): Promise<Match | null> {
+    if (!isValidMatchCode(value)) return null
     const code = extractInviteCode(value)
     if (!code) return null
     const result = await client().rpc('attend_match_by_invite', { p_invite_code: code })

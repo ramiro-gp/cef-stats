@@ -31,7 +31,7 @@ interface Props {
   onDeleteEntry: (id: string) => void | Promise<void>
   onLinkEntry: (entryId: string, matchId: string, team: MatchTeam, result?: MatchResult) => boolean | Promise<boolean>
   onTheme: (theme: ThemeMode) => void
-  onLogout: () => void
+  onLogout: () => void | Promise<void>
   accountMode?: boolean
   statsError?: string
   onOpenMatch: (matchId: string) => void
@@ -51,6 +51,8 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<StatEntry | null>(null)
   const [linkEntry, setLinkEntry] = useState<StatEntry | null>(null)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
   const [localHistoryState, setLocalHistoryState] = useState({ userId: user.id, page: 1 })
   const [localHistoryFilters, setLocalHistoryFilters] = useState<StatFilters>(DEFAULT_STAT_FILTERS)
   const localHistoryPage = localHistoryState.userId === user.id ? localHistoryState.page : 1
@@ -73,6 +75,14 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
     if (onHistoryFiltersChange) onHistoryFiltersChange(nextFilters)
     else { setLocalHistoryFilters(nextFilters); setLocalHistoryState({ userId: user.id, page: 1 }) }
   }
+  const logout = async () => {
+    if (loggingOut) return
+    setLoggingOut(true)
+    setLogoutError('')
+    try { await onLogout() }
+    catch (reason) { setLogoutError(reason instanceof Error ? reason.message : 'No pudimos cerrar la sesión.') }
+    finally { setLoggingOut(false) }
+  }
   const progress = worldCupProgress(worldCup)
   const profileTitle = user.nickname && user.nickname !== user.name ? `${user.name} “${user.nickname}”` : user.name
 
@@ -93,7 +103,8 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
           <div className="mt-4 grid grid-cols-7 gap-1">{Array.from({ length: 7 }, (_, index) => <div key={index} className={`h-1.5 rounded-full ${index < progress ? 'bg-violet-500' : 'bg-slate-200 dark:bg-white/10'}`} />)}</div>
           <div className="mt-3 text-[11px] text-slate-400">Mundiales ganados: <strong className="text-violet-500">{worldCup.worldCupsWon}</strong></div>
         </section>
-        <button onClick={onLogout} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 py-3.5 text-sm font-bold text-slate-500 transition hover:border-red-400 hover:text-red-500 dark:border-white/10"><LogoutIcon className="h-4 w-4" /> {accountMode ? 'Cerrar sesión' : 'Salir del modo local'}</button>
+        {logoutError && <p className="rounded-xl bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{logoutError}</p>}
+        <button onClick={() => void logout()} disabled={loggingOut} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 py-3.5 text-sm font-bold text-slate-500 transition hover:border-red-400 hover:text-red-500 disabled:opacity-50 dark:border-white/10"><LogoutIcon className="h-4 w-4" /> {loggingOut ? 'Cerrando sesión...' : accountMode ? 'Cerrar sesión' : 'Salir del modo local'}</button>
       </div>
       <div>
         <div className="mb-3 flex items-center justify-between"><div><h2 className="font-extrabold">Mi historial de cargas</h2><p className="mt-0.5 text-xs text-slate-400">Sólo tus números, en todos los scopes disponibles.</p></div><span className="text-xs text-slate-400">{totalHistoryEntries} {accountMode ? 'en Supabase' : 'locales'}</span></div>

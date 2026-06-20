@@ -59,5 +59,3 @@ export const seedFeed: ActivityFeedItem[] = [
   { id: 'seed-2', groupId: defaultGroup.id, icon: 'up', category: 'ranking_change', important: true, text: 'Fede superó a Lucas en goles.', createdAt: '2026-06-16T21:00:00.000Z' },
   { id: 'seed-3', groupId: defaultGroup.id, icon: 'fire', category: 'streak', important: true, text: 'Nacho lleva 3 partidos seguidos convirtiendo.', createdAt: '2026-06-15T21:00:00.000Z' },
 ]
-
-export const reservedMockHandles = ['fede', 'thiago', 'nacho', 'lucas']
