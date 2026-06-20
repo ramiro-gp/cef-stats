@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { appVersion } from '../config/appVersion'
+import { APP_NAME } from '../config/appBrand'
 import type { LoadFormatPreference, LoadMatchTypePreference, PlayerPosition, ThemeMode, User } from '../types'
 import { LoadPreferencesFields } from './LoadPreferencesFields'
 import { ModalSheet } from './ModalSheet'
@@ -34,6 +35,6 @@ export function SettingsSheet({ user, theme, onTheme, onSaveUser, onClose }: Pro
     <div className="mt-6"><LoadPreferencesFields position={position} defaultMatchType={defaultMatchType} defaultFootballFormat={defaultFootballFormat} onPosition={setPosition} onMatchType={setDefaultMatchType} onFootballFormat={setDefaultFootballFormat} /></div>
     {error && <p className="mt-3 text-sm font-semibold text-rose-500">{error}</p>}
     <button type="button" onClick={() => void save()} disabled={saving} className="mt-5 min-h-12 w-full rounded-xl bg-emerald-500 font-extrabold text-ink disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar ajustes'}</button>
-    <p className="mt-6 text-center text-xs text-slate-400">Fulbo Stats {appVersion}</p>
+    <p className="mt-6 text-center text-xs text-slate-400">{APP_NAME} {appVersion}</p>
   </ModalSheet>
 }

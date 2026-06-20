@@ -1,16 +1,12 @@
-import type { Group, RankingPlayer, StatEntry, StatFootballFormat, StatMatchType, User } from '../types'
+import type { Group, RankingPlayer, StatEntry, User } from '../types'
 import { isAllScope } from './scopes'
+import { filterStatEntries, type FootballFormatFilter, type MatchTypeFilter } from './statFilters'
 import { buildGroupRankings, buildRankings } from './stats'
 
-export type MatchTypeFilter = 'all' | StatMatchType
-export type FootballFormatFilter = 'all' | StatFootballFormat
+export type { FootballFormatFilter, MatchTypeFilter } from './statFilters'
 
 export function filterRankingEntries(entries: StatEntry[], matchType: MatchTypeFilter, footballFormat: FootballFormatFilter): StatEntry[] {
-  return entries.filter(entry => {
-    const entryMatchType = entry.matchType ?? 'friendly'
-    const entryFootballFormat = entry.footballFormat ?? 'F5'
-    return (matchType === 'all' || entryMatchType === matchType) && (footballFormat === 'all' || entryFootballFormat === footballFormat)
-  })
+  return filterStatEntries(entries, { matchType, footballFormat })
 }
 
 export function buildScopeRankings(entries: StatEntry[], users: User[], group: Group, currentUserId: string): RankingPlayer[] {

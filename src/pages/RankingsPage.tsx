@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react'
 import { MedalIcon } from '../components/icons'
 import { PageTitle } from '../components/PageTitle'
 import { UserAvatar } from '../components/UserAvatar'
+import { StatFilterControls } from '../components/StatFilterControls'
 import type { Group, RankingPlayer, RankingTab, StatEntry, User } from '../types'
 import { buildScopeRankings, filterRankingEntries, type FootballFormatFilter, type MatchTypeFilter } from '../utils/rankingFilters'
+import { footballFormatFilterLabel, matchTypeFilterLabel } from '../utils/statFilters'
 import { isAllScope, isPersonalScope } from '../utils/scopes'
 import { sortRankings } from '../utils/stats'
 import { worldCupStageLabels } from '../utils/worldCup'
@@ -11,9 +13,6 @@ import { worldCupStageLabels } from '../utils/worldCup'
 const tabs: { id: RankingTab; label: string }[] = [
   { id: 'goals', label: 'Goles' }, { id: 'assists', label: 'Asistencias' }, { id: 'matches', label: 'Partidos' }, { id: 'average', label: 'Promedio' }, { id: 'worldCup', label: 'Mundial' },
 ]
-const matchTypeOptions: { value: MatchTypeFilter; label: string }[] = [{ value: 'all', label: 'Todos' }, { value: 'friendly', label: 'Amistoso' }, { value: 'tournament', label: 'Torneo' }]
-const formatOptions: FootballFormatFilter[] = ['all', 'F5', 'F6', 'F7', 'F8', 'F11']
-
 function rankingValue(player: RankingPlayer, tab: RankingTab): string {
   if (tab === 'goals') return `${player.goals} goles`
   if (tab === 'assists') return `${player.assists} asist.`
@@ -30,10 +29,6 @@ function rankingDetail(player: RankingPlayer, tab: RankingTab): string {
   return `${player.matches} partidos cargados`
 }
 
-function FilterRow<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string }[]; value: T; onChange: (value: T) => void }) {
-  return <div><p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p><div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">{options.map(option => <button type="button" key={option.value} onClick={() => onChange(option.value)} aria-pressed={value === option.value} className={`min-h-9 shrink-0 rounded-full px-3 text-xs font-bold transition ${value === option.value ? 'bg-emerald-500 text-ink' : 'border border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-300'}`}>{option.label}</button>)}</div></div>
-}
-
 interface Props { group: Group; players: RankingPlayer[]; sourceEntries: StatEntry[]; sourceUsers: User[]; currentUserId: string }
 
 export function RankingsPage({ group, players, sourceEntries, sourceUsers, currentUserId }: Props) {
@@ -47,13 +42,13 @@ export function RankingsPage({ group, players, sourceEntries, sourceUsers, curre
   const filteredPlayers = useMemo(() => filtersActive ? buildScopeRankings(filteredEntries, sourceUsers, group, currentUserId) : players, [currentUserId, filteredEntries, filtersActive, group, players, sourceUsers])
   const sorted = sortRankings(filteredPlayers, tab)
   const current = filteredPlayers.find(player => player.isCurrentUser)
-  const typeLabel = matchTypeOptions.find(option => option.value === matchType)?.label ?? 'Todos'
-  const formatLabel = footballFormat === 'all' ? 'Todos los formatos' : footballFormat
+  const typeLabel = matchTypeFilterLabel(matchType)
+  const formatLabel = footballFormatFilterLabel(footballFormat)
 
   return <>
     <PageTitle eyebrow={group.name} title={personalScope ? 'Mis números' : 'Rankings'} subtitle={personalScope ? 'Tu rendimiento personal, sin necesidad de un grupo.' : allScope ? 'Personas únicas y stats combinadas de todos tus grupos.' : 'La tabla que nadie admite mirar todos los días.'} />
     <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]">
-      <div className="space-y-4"><FilterRow label="Tipo de partido" options={matchTypeOptions} value={matchType} onChange={setMatchType} /><FilterRow label="Formato" options={formatOptions.map(value => ({ value, label: value === 'all' ? 'Todos' : value }))} value={footballFormat} onChange={setFootballFormat} /></div>
+      <StatFilterControls filters={{ matchType, footballFormat }} onChange={filters => { setMatchType(filters.matchType); setFootballFormat(filters.footballFormat) }} />
       <p className="mt-4 text-[11px] font-semibold text-slate-400">Rankings · {typeLabel} · {formatLabel}<span className="ml-1">({filteredEntries.length} cargas)</span></p>
     </section>
 

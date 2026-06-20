@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { User } from '../types'
 import type { UserTotals } from '../utils/stats'
 import { createProfileCardPng } from '../utils/profileCard'
+import { APP_NAME, APP_SLUG } from '../config/appBrand'
 
 function download(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
@@ -25,12 +26,12 @@ export function ShareProfileCardButton({ user, totals }: { user: User; totals: U
       const blob = await createProfileCardPng(user, totals)
       const handle = user.username.replace(/^@/, '').trim()
       const safeHandle = handle.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'jugador'
-      const filename = `fulbo-stats-${safeHandle}.png`
+      const filename = `${APP_SLUG}-${safeHandle}.png`
       const file = new File([blob], filename, { type: 'image/png' })
       let canShareFile = false
       try { canShareFile = typeof navigator.share === 'function' && Boolean(navigator.canShare?.({ files: [file] })) } catch { canShareFile = false }
       if (canShareFile) {
-        try { await navigator.share({ title: 'Mi tarjeta Fulbo Stats', text: 'Mis números en Fulbo Stats ⚽', files: [file] }) }
+        try { await navigator.share({ title: `Mi tarjeta ${APP_NAME}`, text: `Mis números en ${APP_NAME} ⚽`, files: [file] }) }
         catch (reason) { if (reason instanceof DOMException && reason.name === 'AbortError') throw reason; download(blob, filename) }
       } else download(blob, filename)
       setStatus('done'); window.setTimeout(() => setStatus('idle'), 1800)

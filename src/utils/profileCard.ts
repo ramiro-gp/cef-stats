@@ -2,6 +2,7 @@ import { findAvatarOption } from '../data/avatarOptions'
 import type { User } from '../types'
 import type { UserTotals } from './stats'
 import { avatarSvgDataUrl } from './avatarSvg'
+import { APP_NAME } from '../config/appBrand'
 
 function roundedRectPath(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
   const safeRadius = Math.min(radius, width / 2, height / 2)
@@ -36,7 +37,7 @@ export async function createProfileCardPng(user: User, totals: UserTotals): Prom
   gradient.addColorStop(0, '#07110e'); gradient.addColorStop(.55, '#0d2b21'); gradient.addColorStop(1, '#064e3b')
   context.fillStyle = gradient; context.fillRect(0, 0, 1080, 1350)
   context.fillStyle = 'rgba(52,211,153,.12)'; context.beginPath(); context.arc(930, 120, 300, 0, Math.PI * 2); context.fill()
-  context.fillStyle = '#34d399'; context.font = '900 58px Inter, Arial, sans-serif'; context.fillText('FULBO STATS', 80, 105)
+  context.fillStyle = '#34d399'; context.font = '900 58px Inter, Arial, sans-serif'; context.fillText(APP_NAME.toUpperCase(), 80, 105)
   context.fillStyle = '#94a3b8'; context.font = '600 28px Inter, Arial, sans-serif'; context.fillText('MI TARJETA DE JUGADOR', 80, 150)
 
   const avatarOption = findAvatarOption(user.avatar)

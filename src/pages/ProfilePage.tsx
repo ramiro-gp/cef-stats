@@ -13,6 +13,8 @@ import { worldCupProgress } from '../utils/activityFeed'
 import { formatStatContext } from '../utils/statContext'
 import { UserAvatar } from '../components/UserAvatar'
 import { ShareProfileCardButton } from '../components/ShareProfileCardButton'
+import { StatFilterControls } from '../components/StatFilterControls'
+import { DEFAULT_STAT_FILTERS, filterStatEntries, type StatFilters } from '../utils/statFilters'
 
 interface Props {
   user: User
@@ -39,27 +41,37 @@ interface Props {
   historyPageSize?: number
   historyLoading?: boolean
   historyError?: string
+  historyFilters?: StatFilters
+  onHistoryFiltersChange?: (filters: StatFilters) => void
   onHistoryPageChange?: (page: number) => void
 }
 
-export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', onHistoryPageChange }: Props) {
+export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<StatEntry | null>(null)
   const [linkEntry, setLinkEntry] = useState<StatEntry | null>(null)
   const [localHistoryState, setLocalHistoryState] = useState({ userId: user.id, page: 1 })
+  const [localHistoryFilters, setLocalHistoryFilters] = useState<StatFilters>(DEFAULT_STAT_FILTERS)
   const localHistoryPage = localHistoryState.userId === user.id ? localHistoryState.page : 1
   const controlledHistory = historyPage !== undefined && Boolean(onHistoryPageChange)
+  const activeHistoryFilters = historyFilters ?? localHistoryFilters
+  const filtersActive = activeHistoryFilters.matchType !== 'all' || activeHistoryFilters.footballFormat !== 'all'
   const historySource = historyEntries ?? entries
-  const totalHistoryEntries = historyTotal ?? historySource.length
+  const filteredHistorySource = filterStatEntries(historySource, activeHistoryFilters)
+  const totalHistoryEntries = controlledHistory ? historyTotal ?? filteredHistorySource.length : filteredHistorySource.length
   const historyPages = Math.max(1, Math.ceil(totalHistoryEntries / historyPageSize))
   const activeHistoryPage = Math.min(historyPages, historyPage ?? localHistoryPage)
-  const sortedHistory = [...historySource].sort((a, b) => (b.playedAt ?? b.createdAt).localeCompare(a.playedAt ?? a.createdAt))
+  const sortedHistory = [...filteredHistorySource].sort((a, b) => (b.playedAt ?? b.createdAt).localeCompare(a.playedAt ?? a.createdAt))
   const history = controlledHistory ? sortedHistory : sortedHistory.slice((activeHistoryPage - 1) * historyPageSize, activeHistoryPage * historyPageSize)
   const changeHistoryPage = (page: number) => {
     const next = Math.min(historyPages, Math.max(1, page))
     if (controlledHistory) onHistoryPageChange?.(next)
     else setLocalHistoryState({ userId: user.id, page: next })
+  }
+  const changeHistoryFilters = (nextFilters: StatFilters) => {
+    if (onHistoryFiltersChange) onHistoryFiltersChange(nextFilters)
+    else { setLocalHistoryFilters(nextFilters); setLocalHistoryState({ userId: user.id, page: 1 }) }
   }
   const progress = worldCupProgress(worldCup)
   const profileTitle = user.nickname && user.nickname !== user.name ? `${user.name} “${user.nickname}”` : user.name
@@ -85,10 +97,11 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
       </div>
       <div>
         <div className="mb-3 flex items-center justify-between"><div><h2 className="font-extrabold">Mi historial de cargas</h2><p className="mt-0.5 text-xs text-slate-400">Sólo tus números, en todos los scopes disponibles.</p></div><span className="text-xs text-slate-400">{totalHistoryEntries} {accountMode ? 'en Supabase' : 'locales'}</span></div>
+        <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><StatFilterControls filters={activeHistoryFilters} onChange={changeHistoryFilters} /></section>
         {(historyError || statsError) && <div className="mb-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{historyError || statsError}</div>}
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]">
           {historyLoading && <div className="p-8 text-center text-sm text-slate-400">Cargando tu historial...</div>}
-          {!historyLoading && history.length === 0 && <div className="p-8 text-center"><div className="text-2xl">⚽</div><p className="mt-3 font-bold">Todavía no hay stats</p><p className="mt-1 text-sm text-slate-400">Cargá tu primer partido y aparece acá.</p></div>}
+          {!historyLoading && history.length === 0 && <div className="p-8 text-center"><div className="text-2xl">⚽</div><p className="mt-3 font-bold">{filtersActive ? 'No hay cargas para estos filtros' : 'Todavía no hay stats'}</p><p className="mt-1 text-sm text-slate-400">{filtersActive ? 'Probá otra combinación de tipo y formato.' : 'Cargá tu primer partido y aparece acá.'}</p></div>}
           {!historyLoading && history.map((entry, index) => { const linkedMatch = entry.matchId ? matches.find(match => match.id === entry.matchId) : undefined; const matchGroupName = linkedMatch ? (linkedMatch.groupId ? linkedMatch.groupName ?? groups.find(item => item.id === linkedMatch.groupId)?.name ?? 'Grupo anfitrión' : 'Sin grupo') : undefined; const resultText = entry.result === 'win' ? 'Gané' : entry.result === 'draw' ? 'Empaté' : 'Perdí'; return <div key={entry.id} className={`flex items-center gap-3 p-4 sm:p-5 ${index !== history.length - 1 ? 'border-b border-slate-100 dark:border-white/5' : ''}`}>
             <div className={`grid h-10 w-10 place-items-center rounded-xl ${entry.result === 'win' ? 'bg-emerald-500/10 text-emerald-500' : entry.result === 'draw' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'}`}>{entry.result === 'win' ? <MedalIcon className="h-5 w-5" /> : <span className="font-black">{entry.result === 'draw' ? 'E' : 'D'}</span>}</div>
             <div className="min-w-0 flex-1"><div className="font-bold">{resultText}</div><div className="mt-1 text-xs capitalize text-slate-400">{formatEntryDate(entry.playedAt ?? entry.createdAt)}</div><div className="mt-1 text-[10px] font-semibold text-slate-400">{formatStatContext(entry)}</div>{linkedMatch ? <><button onClick={() => onOpenMatch(linkedMatch.id)} className="mt-1 block max-w-full truncate text-left text-[10px] font-bold text-emerald-500 underline-offset-2 hover:underline">{linkedMatch.title} →</button>{matchGroupName && <div className="mt-1 text-[10px] font-medium text-slate-400">Grupo: {matchGroupName}</div>}</> : entry.matchId ? <div className="mt-1 text-[10px] font-bold leading-4 text-slate-400">Partido vinculado no disponible.</div> : null}</div>

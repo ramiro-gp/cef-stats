@@ -2,6 +2,7 @@ import { supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient
 import type { Group, GroupMemberRole, GroupMemberView, MatchResult, MatchTeam, PlayerPosition, StatEntry, StatFootballFormat, StatMatchType, StatScopeType } from '../types'
 import { createStringStorageAdapter } from './localStorageAdapter'
 import { normalizeGroupCode } from '../utils/groups'
+import type { StatFilters } from '../utils/statFilters'
 
 interface GroupRow {
   id: string
@@ -209,9 +210,14 @@ export const supabaseRepository = {
     return (result.data as StatEntryRow[]).map(toStatEntry)
   },
 
-  async listUserStatEntries(userId: string, page: number, pageSize: number): Promise<{ entries: StatEntry[]; total: number }> {
+  async listUserStatEntries(userId: string, page: number, pageSize: number, filters: StatFilters): Promise<{ entries: StatEntry[]; total: number }> {
     const from = Math.max(0, page - 1) * pageSize
-    const result = await client().from('stat_entries').select(statColumns, { count: 'exact' }).eq('user_id', userId).order('played_at', { ascending: false }).range(from, from + pageSize - 1)
+    let query = client().from('stat_entries').select(statColumns, { count: 'exact' }).eq('user_id', userId)
+    if (filters.matchType === 'friendly') query = query.or('match_type.eq.friendly,match_type.is.null')
+    else if (filters.matchType === 'tournament') query = query.eq('match_type', 'tournament')
+    if (filters.footballFormat === 'F5') query = query.or('football_format.eq.F5,football_format.is.null')
+    else if (filters.footballFormat !== 'all') query = query.eq('football_format', filters.footballFormat)
+    const result = await query.order('played_at', { ascending: false }).range(from, from + pageSize - 1)
     if (result.error) throw new Error(statError(result.error.message))
     return { entries: (result.data as StatEntryRow[]).map(toStatEntry), total: result.count ?? 0 }
   },
