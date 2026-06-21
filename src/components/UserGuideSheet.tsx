@@ -12,6 +12,7 @@ const sections = [
   { title: 'FOROBARDO y MVP', paragraphs: ['FOROBARDO es el espacio de comentarios de cada partido. Sólo quienes participan pueden verlo y comentar. Cada persona puede editar o borrar su propio comentario.', 'En MVP, cada participante tiene un voto y puede cambiarlo. El resultado muestra quién recibió más votos o si hubo empate.'] },
   { title: 'Rankings y Estadísticas', paragraphs: ['Ranking muestra una tabla para comparar goles, asistencias, partidos, promedios y progreso. Estadísticas muestra esas comparaciones con gráficos.', 'Podés elegir Amistoso o Torneo y filtrar por F5, F6, F7, F8 o F11. Siempre se tiene en cuenta lo que elegiste arriba.'] },
   { title: 'Perfil y tarjeta compartible', paragraphs: ['Perfil reúne tu historial, tus récords y tus totales completos. Desde ahí podés editar cargas, vincularlas a partidos y cambiar tus datos.', 'Compartir mi tarjeta crea una imagen con avatar, nombre, goles, asistencias, partidos y récords para compartir o guardar. No se sube a la base de datos.'] },
+  { title: 'Instalar Fulbo Stats', paragraphs: ['Podés instalar Fulbo Stats desde el navegador y abrirla como cualquier otra app. En Android, Chrome muestra Instalar app; en iPhone usá Compartir y Agregar a pantalla de inicio; en Windows buscá el ícono de instalación de Chrome o Edge.', 'La app guarda sus archivos básicos para abrir más rápido, pero tus partidos y estadísticas se sincronizan online con tu cuenta. No es una app completamente offline.'] },
   { title: 'Reglas para cuidar los datos', paragraphs: ['Cargá una sola vez cada partido. Si ya existe un partido, vinculá o editá la carga anterior en lugar de crear otra.', 'Usá el resultado real, revisá goles y asistencias antes de guardar y elegí el grupo correcto. En partidos compartidos, acordá con los demás quién corrige el resultado o los equipos.'] },
 ]
 
@@ -20,6 +21,7 @@ const questions = [
   ['¿TODOS es un grupo?', 'No. Es una vista que reúne tus grupos y tus datos personales.'],
   ['¿Puedo entrar a un partido sin entrar al grupo?', 'Sí. El link o código te suma como participante del partido.'],
   ['¿Quién puede ver un partido?', 'Sus participantes y las personas autorizadas por el grupo anfitrión, según corresponda.'],
+  ['¿Funciona sin internet?', 'Podés abrir la app instalada, pero necesitás conexión para consultar y guardar los datos de tu cuenta.'],
   ['¿Cómo guardo esta guía?', 'Tocá Imprimir / guardar PDF y elegí Guardar como PDF en las opciones de impresión.'],
 ]
 

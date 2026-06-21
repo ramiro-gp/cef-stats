@@ -25,13 +25,14 @@ interface Props {
   allEntries: StatEntry[]
   matches: Match[]
   groups: Group[]
+  personalContextId?: string
   totals: UserTotals
   worldCup: PersonalWorldCupState
   globalScoringStreakRecord: number
   globalWorldCupsWon: number
   theme: ThemeMode
   onSaveUser: (user: User) => void | string | Promise<void | string>
-  onUpdateEntry: (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'>) => void | Promise<void>
+  onUpdateEntry: (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { contextId: string }) => void | Promise<void>
   onDeleteEntry: (id: string) => void | Promise<void>
   onLinkEntry: (entryId: string, matchId: string, team: MatchTeam, result?: MatchResult) => boolean | Promise<boolean>
   onNotify: (text: string, tone?: 'success' | 'error') => void
@@ -41,6 +42,9 @@ interface Props {
   statsError?: string
   onOpenMatch: (matchId: string) => void
   onStartTour: (tourId: ProductTourId) => void
+  pwaCanInstall: boolean
+  pwaInstalled: boolean
+  onInstallPwa: () => Promise<boolean>
   historyEntries?: StatEntry[]
   historyTotal?: number
   historyPage?: number
@@ -52,7 +56,7 @@ interface Props {
   onHistoryPageChange?: (page: number) => void
 }
 
-export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onNotify, onTheme, onLogout, onOpenMatch, onStartTour, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
+export function ProfilePage({ user, group, entries, allEntries, matches, groups, personalContextId, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onNotify, onTheme, onLogout, onOpenMatch, onStartTour, pwaCanInstall, pwaInstalled, onInstallPwa, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -119,9 +123,9 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/[0.04]">
           {historyLoading && <div className="p-8 text-center text-sm text-slate-400">Cargando tu historial...</div>}
           {!historyLoading && history.length === 0 && <div className="p-8 text-center"><div className="text-2xl">⚽</div><p className="mt-3 font-bold">{filtersActive ? 'No hay cargas para estos filtros' : 'Todavía no hay stats'}</p><p className="mt-1 text-sm text-slate-400">{filtersActive ? 'Probá otra combinación de tipo y formato.' : 'Cargá tu primer partido y aparece acá.'}</p></div>}
-          {!historyLoading && history.map((entry, index) => { const linkedMatch = entry.matchId ? matches.find(match => match.id === entry.matchId) : undefined; const matchGroupName = linkedMatch ? (linkedMatch.groupId ? linkedMatch.groupName ?? groups.find(item => item.id === linkedMatch.groupId)?.name ?? 'Grupo anfitrión' : 'Sin grupo') : undefined; const resultText = entry.result === 'win' ? 'Gané' : entry.result === 'draw' ? 'Empaté' : 'Perdí'; return <div key={entry.id} className={`flex items-center gap-3 p-4 sm:p-5 ${index !== history.length - 1 ? 'border-b border-slate-100 dark:border-white/5' : ''}`}>
+          {!historyLoading && history.map((entry, index) => { const linkedMatch = entry.matchId ? matches.find(match => match.id === entry.matchId) : undefined; const matchGroupName = linkedMatch ? (linkedMatch.groupId ? linkedMatch.groupName ?? groups.find(item => item.id === linkedMatch.groupId)?.name ?? 'Grupo anfitrión' : 'Sin grupo') : undefined; const contextName = entry.scopeType === 'personal' || !entry.groupId || entry.groupId.startsWith('personal:') ? 'Personal sin grupo' : groups.find(item => item.id === entry.groupId)?.name ?? linkedMatch?.groupName ?? 'Grupo no disponible'; const resultText = entry.result === 'win' ? 'Gané' : entry.result === 'draw' ? 'Empaté' : 'Perdí'; return <div key={entry.id} className={`flex items-center gap-3 p-4 sm:p-5 ${index !== history.length - 1 ? 'border-b border-slate-100 dark:border-white/5' : ''}`}>
             <div className={`grid h-10 w-10 place-items-center rounded-xl ${entry.result === 'win' ? 'bg-emerald-500/10 text-emerald-500' : entry.result === 'draw' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'}`}>{entry.result === 'win' ? <MedalIcon className="h-5 w-5" /> : <span className="font-black">{entry.result === 'draw' ? 'E' : 'D'}</span>}</div>
-            <div className="min-w-0 flex-1"><div className="font-bold">{resultText}</div><div className="mt-1 text-xs capitalize text-slate-400">{formatEntryDate(entry.playedAt ?? entry.createdAt)}</div><div className="mt-1 text-[10px] font-semibold text-slate-400">{formatStatContext(entry)}</div>{linkedMatch ? <><button onClick={() => onOpenMatch(linkedMatch.id)} className="mt-1 block max-w-full truncate text-left text-[10px] font-bold text-emerald-500 underline-offset-2 hover:underline">{linkedMatch.title} →</button>{matchGroupName && <div className="mt-1 text-[10px] font-medium text-slate-400">Grupo: {matchGroupName}</div>}</> : entry.matchId ? <div className="mt-1 text-[10px] font-bold leading-4 text-slate-400">Partido vinculado no disponible.</div> : null}</div>
+            <div className="min-w-0 flex-1"><div className="font-bold">{resultText}</div><div className="mt-1 text-xs capitalize text-slate-400">{formatEntryDate(entry.playedAt ?? entry.createdAt)}</div><div className="mt-1 text-[10px] font-semibold text-slate-400">{formatStatContext(entry)}</div><div className="mt-1 text-[10px] font-bold text-slate-500 dark:text-slate-300">Contexto: {contextName}</div>{linkedMatch ? <><button onClick={() => onOpenMatch(linkedMatch.id)} className="mt-1 block max-w-full truncate text-left text-[10px] font-bold text-emerald-500 underline-offset-2 hover:underline">{linkedMatch.title} →</button>{matchGroupName && <div className="mt-1 text-[10px] font-medium text-slate-400">Partido en: {matchGroupName}</div>}</> : entry.matchId ? <div className="mt-1 text-[10px] font-bold leading-4 text-slate-400">Partido vinculado no disponible.</div> : null}</div>
             <div className="flex flex-wrap justify-end gap-2 text-center"><div><div className="font-black">{entry.goals}</div><div className="text-[9px] text-slate-400">GOL</div></div><div><div className="font-black">{entry.assists}</div><div className="text-[9px] text-slate-400">ASIS</div></div>{!entry.matchId && <button onClick={() => setLinkEntry(entry)} className="min-h-10 rounded-xl border border-emerald-500/30 px-2 text-[10px] font-bold text-emerald-500">Vincular a partido</button>}<button onClick={() => setSelectedEntry(entry)} className="min-h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-white/10">Editar</button></div>
           </div>})}
         </div>
@@ -130,9 +134,9 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
     </div>
     <div className="mt-8 border-t border-slate-200 pt-6 dark:border-white/10">{logoutError && <p className="mb-3 rounded-xl bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{logoutError}</p>}<button onClick={() => void logout()} disabled={loggingOut} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 py-3.5 text-sm font-bold text-slate-500 transition hover:border-red-400 hover:text-red-500 disabled:opacity-50 dark:border-white/10"><LogoutIcon className="h-4 w-4" /> {loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}</button></div>
     {editingProfile && <ProfileEditor user={user} accountMode={accountMode} onSave={onSaveUser} onClose={() => setEditingProfile(false)} />}
-    {selectedEntry && <StatEntryEditor entry={selectedEntry} onSave={values => onUpdateEntry(selectedEntry.id, values)} onDelete={() => onDeleteEntry(selectedEntry.id)} onClose={() => setSelectedEntry(null)} />}
+    {selectedEntry && <StatEntryEditor entry={selectedEntry} groups={groups} personalContextId={personalContextId} linkedMatch={selectedEntry.matchId ? matches.find(match => match.id === selectedEntry.matchId) : undefined} onSave={values => onUpdateEntry(selectedEntry.id, values)} onDelete={() => onDeleteEntry(selectedEntry.id)} onClose={() => setSelectedEntry(null)} />}
     {linkEntry && <LinkEntrySheet entry={linkEntry} matches={matches} groups={groups} allEntries={allEntries} onLink={onLinkEntry} onSuccess={() => onNotify('Stats vinculadas correctamente.')} onEditExisting={entry => setSelectedEntry(entry)} onClose={() => setLinkEntry(null)} />}
-    {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onStartTour={onStartTour} onOpenGuide={() => setGuideOpen(true)} onClose={() => setSettingsOpen(false)} />}
+    {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onStartTour={onStartTour} onOpenGuide={() => setGuideOpen(true)} canInstall={pwaCanInstall} installed={pwaInstalled} onInstall={onInstallPwa} onClose={() => setSettingsOpen(false)} />}
     {guideOpen && <UserGuideSheet onClose={() => setGuideOpen(false)} />}
   </>
 }

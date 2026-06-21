@@ -24,6 +24,8 @@ import { pageFromPathname, pagePaths } from './config/routes'
 import { supabaseRepository } from './data/supabaseRepository'
 import { inviteCodesEqual } from './utils/inviteCodes'
 import { AppToast, type ToastMessage } from './components/AppToast'
+import { PwaUpdatePrompt } from './components/PwaUpdatePrompt'
+import { usePwaInstall } from './hooks/usePwaInstall'
 import { ProductTour } from './components/ProductTour'
 import { hasSeenInitialTour, markInitialTourSeen, type ProductTourId } from './config/productTours'
 
@@ -67,6 +69,7 @@ export default function App() {
   const attemptedGroupCode = useRef('')
   const store = useLocalStore()
   const auth = useAuth()
+  const pwaInstall = usePwaInstall()
   const location = useLocation()
   const routerNavigate = useNavigate()
   const { theme, setTheme, cycleTheme } = useTheme()
@@ -241,7 +244,10 @@ export default function App() {
     if (!entry) throw new Error('No encontramos la carga que querés vincular.')
     if (!match) throw new Error('No encontramos el partido o ya no tenés acceso.')
     if (entry.matchId) throw new Error('Esta carga ya está vinculada a un partido.')
-    if ((entry.groupId ?? '') !== match.groupId) throw new Error('La carga y el partido pertenecen a grupos diferentes.')
+    if ((entry.scopeType === 'personal' ? '' : entry.groupId ?? '') !== match.groupId) {
+      const expected = match.groupId ? match.groupName ?? remoteGroups.groups.find(item => item.id === match.groupId)?.name ?? 'el grupo del partido' : 'Personal sin grupo'
+      throw new Error(`Esta carga pertenece a otro contexto. Editala y elegí ${expected}, o usá una carga del mismo contexto que el partido.`)
+    }
     if ([...profileHistory.seasonEntries, ...remoteStats.entries, ...remoteMatches.entries].some(item => item.id !== entryId && item.userId === currentUser.id && item.matchId === matchId)) throw new Error('Ya tenés una carga vinculada a este partido.')
     const participant = match.participants.find(item => item.userId === currentUser.id)
     const effectiveTeam = participant?.team ?? team
@@ -255,9 +261,20 @@ export default function App() {
     return true
   } : store.linkEntryToMatch
 
-  const updateProfileHistoryEntry = async (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'>) => {
-    if (!accountMode) return store.updateEntry(id, values)
-    await remoteStats.updateEntry(id, values)
+  const updateProfileHistoryEntry = async (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { contextId: string }) => {
+    const entry = (accountMode ? profileHistory.seasonEntries : store.entries).find(item => item.id === id && item.userId === currentUser.id)
+    if (!entry) throw new Error('No encontramos la carga que querés editar.')
+    const personalContextId = accountMode ? remoteGroups.personalScope?.id : undefined
+    const targetGroup = accountMode ? remoteGroups.groups.find(item => item.id === values.contextId) : store.groups.find(item => item.id === values.contextId)
+    const isPersonalTarget = Boolean(personalContextId && values.contextId === personalContextId)
+    if (!targetGroup && !isPersonalTarget) throw new Error('Elegí un contexto válido para esta carga.')
+    const linkedMatch = entry.matchId ? allMatches.find(match => match.id === entry.matchId) : undefined
+    const targetGroupId = isPersonalTarget ? '' : targetGroup?.id ?? ''
+    if (entry.matchId && !linkedMatch) throw new Error('Esta carga está vinculada a un partido que no está disponible. No podés cambiar su contexto.')
+    if (linkedMatch && linkedMatch.groupId !== targetGroupId) throw new Error('Esta carga está vinculada a un partido. Para cambiarla a otro contexto, primero debe desvincularse del partido.')
+    const statValues = { result: values.result, goals: values.goals, assists: values.assists }
+    if (!accountMode) return store.updateEntry(id, { ...statValues, groupId: targetGroupId })
+    await remoteStats.updateEntry(id, { ...statValues, scope: isPersonalTarget ? { type: 'personal', userId: currentUser.id } : { type: 'group', userId: currentUser.id, groupId: targetGroup!.id } })
     await profileHistory.reload()
   }
 
@@ -297,7 +314,7 @@ export default function App() {
     add: <AddStatsPage key={group.id} onSave={saveQuickStats} onNavigate={navigate} onNotify={notify} matches={accountMode ? allMatches : groupMatches} groups={accountMode ? remoteGroups.groups : store.groups} entries={accountMode ? scopeEntries : store.entries} user={currentUser} defaultContextId={accountMode ? remoteGroups.activeSharedGroup?.id ?? (personalScope ? remoteGroups.personalScope?.id ?? '' : '') : group.id} personalContextId={accountMode ? remoteGroups.personalScope?.id : undefined} />,
     matches: <MatchesPage group={group} user={currentUser} matches={matchRouteId ? allMatches : groupMatches} entries={accountMode ? remoteMatches.entries : groupEntries} initialMatchId={matchRouteId} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} creationGroups={accountMode ? remoteGroups.groups : []} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onCloseMatch={() => routerNavigate(pagePaths.matches, { replace: true })} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onParticipantTeam={accountMode ? remoteMatches.setParticipantTeam : store.setParticipantTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? async (matchId, values) => { const saved = await remoteMatches.saveStats(matchId, values); await Promise.all([profileHistory.reload(), remoteStats.reload()]); return saved } : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} />,
     rankings: <RankingsPage group={group} players={rankings} sourceEntries={rankingEntries} sourceUsers={accountMode ? rankingUsers : [currentUser]} currentUserId={currentUser.id} />,
-    profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? [...profileHistory.entries, ...remoteStats.entries] : store.entries} matches={accountMode ? allMatches : groupMatches} groups={groups} totals={globalTotals} worldCup={worldCup} globalScoringStreakRecord={globalScoringStreakRecord} globalWorldCupsWon={globalWorldCup.worldCupsWon} theme={theme} onSaveUser={saveUser} onUpdateEntry={updateProfileHistoryEntry} onDeleteEntry={deleteProfileHistoryEntry} onLinkEntry={linkEntry} onNotify={notify} onTheme={setTheme} onLogout={logout} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onStartTour={setActiveTour} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} historyEntries={accountMode ? profileHistory.entries : store.entries.filter(entry => entry.userId === currentUser.id)} historyTotal={accountMode ? profileHistory.total : undefined} historyPage={accountMode ? profileHistory.page : undefined} historyPageSize={profileHistory.pageSize} historyLoading={accountMode && profileHistory.loading} historyError={accountMode ? profileHistory.error : ''} historyFilters={accountMode ? profileHistory.filters : undefined} onHistoryFiltersChange={accountMode ? profileHistory.setFilters : undefined} onHistoryPageChange={accountMode ? profileHistory.setPage : undefined} />,
+    profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? [...profileHistory.entries, ...remoteStats.entries] : store.entries} matches={accountMode ? allMatches : groupMatches} groups={accountMode ? remoteGroups.groups : groups} personalContextId={accountMode ? remoteGroups.personalScope?.id : undefined} totals={globalTotals} worldCup={worldCup} globalScoringStreakRecord={globalScoringStreakRecord} globalWorldCupsWon={globalWorldCup.worldCupsWon} theme={theme} onSaveUser={saveUser} onUpdateEntry={updateProfileHistoryEntry} onDeleteEntry={deleteProfileHistoryEntry} onLinkEntry={linkEntry} onNotify={notify} onTheme={setTheme} onLogout={logout} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onStartTour={setActiveTour} pwaCanInstall={pwaInstall.canInstall} pwaInstalled={pwaInstall.installed} onInstallPwa={pwaInstall.install} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} historyEntries={accountMode ? profileHistory.entries : store.entries.filter(entry => entry.userId === currentUser.id)} historyTotal={accountMode ? profileHistory.total : undefined} historyPage={accountMode ? profileHistory.page : undefined} historyPageSize={profileHistory.pageSize} historyLoading={accountMode && profileHistory.loading} historyError={accountMode ? profileHistory.error : ''} historyFilters={accountMode ? profileHistory.filters : undefined} onHistoryFiltersChange={accountMode ? profileHistory.setFilters : undefined} onHistoryPageChange={accountMode ? profileHistory.setPage : undefined} />,
     groups: <GroupsPage groups={accountMode ? remoteGroups.groups : groups} currentGroup={accountMode ? remoteGroups.activeSharedGroup : group} members={accountMode ? remoteGroups.members : localMembers} memberships={accountMode ? remoteGroups.allMembers : localMembers} currentUserId={accountMode ? auth.user!.id : currentUser.id} remoteMode={accountMode} loading={accountMode && remoteGroups.loading} membersLoading={accountMode && remoteGroups.membersLoading} loadError={accountMode ? groupInviteError || remoteGroups.error : ''} onSelectGroup={selectGroup} onCreateGroup={accountMode ? remoteGroups.createGroup : store.createGroup} onJoinGroup={accountMode ? remoteGroups.joinGroup : store.joinGroup} onUpdateGroup={accountMode ? remoteGroups.updateGroup : store.updateGroup} />,
   }
 
@@ -316,5 +333,6 @@ export default function App() {
     {activePage && accountMode && remoteStats.loading ? <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando stats...</div> : <>{accountMode && remoteStats.error && activePage !== 'profile' && <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-500">{remoteStats.error}</div>}<Suspense fallback={<PageLoading />}>{routedContent}</Suspense></>}
     {activeTour && <ProductTour tourId={activeTour} activePage={activePage} onNavigate={navigate} onClose={closeTour} />}
     {toast && <AppToast message={toast} onClose={closeToast} />}
+    <PwaUpdatePrompt />
   </AppShell>
 }

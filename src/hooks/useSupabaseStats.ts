@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { supabaseRepository, type StatEntryInput, type StatScope } from '../data/supabaseRepository'
+import { supabaseRepository, type StatEntryInput, type StatEntryUpdateInput, type StatScope } from '../data/supabaseRepository'
 import type { Group, StatEntry } from '../types'
 import { isAllScope, isPersonalScope } from '../utils/scopes'
 
@@ -61,7 +61,7 @@ export function useSupabaseStats(userId: string | null, activeScope: Group | nul
     }
   }, [scope, scopeKey])
 
-  const updateEntry = useCallback(async (id: string, input: Partial<StatEntryInput>) => {
+  const updateEntry = useCallback(async (id: string, input: StatEntryUpdateInput) => {
     const mutationScopeKey = scopeKey
     setSaving(true)
     setErrorState({ scopeKey: mutationScopeKey, message: '' })

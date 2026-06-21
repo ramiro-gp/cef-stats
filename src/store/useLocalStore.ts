@@ -50,7 +50,7 @@ export function useLocalStore() {
     return entry
   }, [state.activeGroupId, state.entries.length, state.matches, state.user.id])
 
-  const updateEntry = useCallback((id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'>) => {
+  const updateEntry = useCallback((id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { groupId?: string }) => {
     setState(current => ({ ...current, entries: current.entries.map(entry => entry.id === id ? { ...entry, ...values } : entry) }))
   }, [])
 

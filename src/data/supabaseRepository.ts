@@ -50,6 +50,7 @@ interface StatEntryRow {
 
 export type StatScope = { type: 'personal'; userId: string } | { type: 'group'; userId: string; groupId: string } | { type: 'all'; userId: string; groupIds: string[] }
 export type StatEntryInput = Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'> & { playedAt?: string }
+export type StatEntryUpdateInput = Partial<StatEntryInput> & { scope?: Exclude<StatScope, { type: 'all' }> }
 
 const activeGroupStorage = createStringStorageAdapter('cef-stats-active-supabase-group')
 
@@ -250,7 +251,7 @@ export const supabaseRepository = {
     return toStatEntry(result.data)
   },
 
-  async updateStatEntry(id: string, userId: string, input: Partial<StatEntryInput>): Promise<StatEntry> {
+  async updateStatEntry(id: string, userId: string, input: StatEntryUpdateInput): Promise<StatEntry> {
     const values: Record<string, unknown> = {}
     if (input.result !== undefined) values.result = input.result
     if (input.goals !== undefined) values.goals = input.goals
@@ -261,6 +262,11 @@ export const supabaseRepository = {
     if (input.footballFormat !== undefined) values.football_format = input.footballFormat
     if (input.playedPosition !== undefined) values.played_position = input.playedPosition || null
     if (input.playedAt !== undefined) values.played_at = input.playedAt
+    if (input.scope) {
+      if (input.scope.userId !== userId) throw new Error('No podés mover una carga de otra persona.')
+      values.scope_type = input.scope.type
+      values.group_id = input.scope.type === 'group' ? input.scope.groupId : null
+    }
     const result = await client().from('stat_entries').update(values).eq('id', id).eq('user_id', userId).select(statColumns).single<StatEntryRow>()
     if (result.error) throw new Error(statError(result.error.message))
     return toStatEntry(result.data)
