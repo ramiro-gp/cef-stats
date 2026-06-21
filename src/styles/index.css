@@ -19,6 +19,28 @@
   .dark ::-webkit-scrollbar-thumb { background: rgba(52, 211, 153, .65); background-clip: padding-box; }
 }
 
+html.theme-amoled,
+html.theme-amoled body,
+html.theme-amoled #root {
+  background: #000;
+  color-scheme: dark;
+}
+
+.theme-amoled [class*="dark:bg-"],
+.theme-amoled [class*="bg-[#"] {
+  background-color: #050505 !important;
+}
+
+.theme-amoled .bg-ink {
+  background-color: #000 !important;
+}
+
+.theme-amoled aside,
+.theme-amoled header,
+.theme-amoled nav {
+  border-color: rgb(255 255 255 / 0.1);
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

@@ -11,18 +11,19 @@ export interface ProductTourStep {
 
 export const productTours: Record<ProductTourId, ProductTourStep[]> = {
   general: [
-    { target: 'app-scope', title: 'Elegí tu cancha', text: 'Cambiá entre Personal, TODOS o un grupo. Inicio, Partidos y Rankings respetan este scope.' },
-    { target: 'nav-home', title: 'Inicio', text: 'Tu temporada, racha y progreso del Mundial de un vistazo.' },
-    { target: 'nav-add', title: 'Cargar', text: 'Guardá resultado, goles y asistencias en pocos toques.' },
-    { target: 'nav-matches', title: 'Partidos', text: 'Creá fechas, compartí el código y armá los equipos.' },
-    { target: 'nav-groups', title: 'Grupos', text: 'Jugá con los tuyos: creá grupos o unite con invitación.' },
-    { target: 'nav-rankings', title: 'Rankings y Estadísticas', text: 'Compará números con filtros y gráficos según el scope activo.' },
-    { target: 'nav-profile', title: 'Perfil y Ajustes', text: 'Editá tu perfil, compartí tu tarjeta y volvé a abrir estas guías.' },
+    { target: 'app-scope', title: 'Elegí qué querés ver', text: 'Acá elegís tus datos personales, todos tus grupos o un grupo puntual.' },
+    { target: 'nav-home', title: 'Inicio', text: 'Acá ves el resumen de tu temporada, tu racha y tu camino en el Mundial.' },
+    { target: 'nav-add', title: 'Cargar', text: 'Acá cargás cómo te fue después de jugar: resultado, goles y asistencias.' },
+    { target: 'nav-matches', title: 'Partidos', text: 'Acá armás partidos, compartís invitaciones y elegís equipos.' },
+    { target: 'nav-groups', title: 'Grupos', text: 'Acá creás grupos con tus amigos o te unís con una invitación.' },
+    { target: 'nav-rankings', title: 'Rankings y Estadísticas', text: 'Acá comparás tus números con los demás en tablas y gráficos.' },
+    { target: 'nav-profile', title: 'Perfil y Ajustes', text: 'Acá editás tu perfil, compartís tu tarjeta y encontrás la ayuda.' },
   ],
   home: [
-    { page: 'home', target: 'home-hero', title: 'Tu resumen', text: 'Acá empieza cada fecha: estado actual y acceso rápido a tus números.' },
-    { page: 'home', target: 'home-season', title: 'Mi temporada', text: 'Goles, asistencias y partidos siempre siguen el scope elegido.' },
-    { page: 'home', target: 'app-scope', title: 'Probá otro scope', text: 'Personal muestra lo tuyo sin grupo; TODOS suma tus grupos y Personal.' },
+    { page: 'home', target: 'home-hero', title: 'Tu punto de partida', text: 'Desde acá podés cargar tus números o ir directo a tus partidos.' },
+    { page: 'home', target: 'home-season', title: 'Mi temporada', text: 'Acá ves tus goles, asistencias, partidos, racha y avance en el Mundial.' },
+    { page: 'home', target: 'home-activity', title: 'Últimas novedades', text: 'Acá aparecen las acciones recientes e importantes de la app.' },
+    { page: 'home', target: 'app-scope', title: 'Elegí qué mirar', text: 'Personal muestra lo tuyo sin grupo. TODOS junta tus grupos y tus datos personales.' },
   ],
   add: [
     { page: 'add', target: 'add-context', title: 'Dónde cuenta', text: 'Elegí Personal o un grupo antes de guardar la carga.' },
@@ -31,20 +32,22 @@ export const productTours: Record<ProductTourId, ProductTourStep[]> = {
     { page: 'add', target: 'add-save', title: 'A la tabla', text: 'Guardá y Fulbo Stats actualiza temporada, ranking y racha.' },
   ],
   matches: [
-    { page: 'matches', target: 'matches-list', title: 'Armá o unite', text: 'Arriba podés crear un partido o entrar con un código de invitación.' },
-    { page: 'matches', target: 'matches-list', title: 'Tus partidos', text: 'La lista respeta el scope y se pagina para que mobile siga liviano.' },
+    { page: 'matches', target: 'matches-list', title: 'Tus partidos', text: 'Acá ves los partidos de lo que elegiste arriba y entrás a cada detalle.' },
+    { page: 'matches', target: 'matches-list', title: 'Creá o unite', text: 'Podés crear un partido nuevo o entrar a uno con su código o link.' },
+    { page: 'matches', target: 'matches-list', title: 'Dentro del partido', text: 'Al abrirlo podés elegir equipo, ver jugadores y consultar el resultado.' },
+    { page: 'matches', target: 'matches-list', title: 'Después de jugar', text: 'También podés comentar en FOROBARDO y cargar o vincular tus goles y asistencias.' },
   ],
   groups: [
     { page: 'groups', target: 'groups-list', title: 'Tus grupos', text: 'Entrá a un grupo, copiá su invitación o editá los que creaste.' },
     { page: 'groups', target: 'groups-actions', title: 'Sumá al equipo', text: 'Creá un grupo nuevo o unite con un código.' },
   ],
   rankings: [
-    { page: 'rankings', target: 'rankings-view', title: 'Dos formas de mirar', text: 'Alterná entre la tabla clásica y los gráficos comparativos.' },
-    { page: 'rankings', target: 'rankings-filters', title: 'Filtrá la cancha', text: 'Combiná Amistoso o Torneo con F5, F6, F7, F8 o F11.' },
-    { page: 'rankings', target: 'rankings-view', title: 'Compará', text: 'La tabla y los gráficos usan el mismo scope y filtros que elegiste arriba.' },
+    { page: 'rankings', target: 'rankings-view', title: 'Ranking', text: 'En Ranking ves la tabla y comparás goles, asistencias, partidos y rendimiento.' },
+    { page: 'rankings', target: 'rankings-view', title: 'Estadísticas', text: 'En Estadísticas ves gráficos y elegís qué jugadores querés comparar.' },
+    { page: 'rankings', target: 'rankings-filters', title: 'Elegí qué partidos contar', text: 'Podés mirar amistosos, torneos y distintos formatos de fútbol.' },
   ],
   profile: [
-    { page: 'profile', target: 'profile-card', title: 'Tu tarjeta global', text: 'Resume todos tus goles, asistencias, partidos y récords, sin importar el scope.' },
+    { page: 'profile', target: 'profile-card', title: 'Tu tarjeta completa', text: 'Resume todos tus goles, asistencias, partidos y récords.' },
     { page: 'profile', target: 'profile-history', title: 'Tu historial', text: 'Revisá, filtrá y editá tus cargas personales.' },
     { page: 'profile', target: 'profile-settings', title: 'Ajustes y ayuda', text: 'Cambiá preferencias y volvé a iniciar cualquier recorrido.' },
   ],

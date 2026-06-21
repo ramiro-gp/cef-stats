@@ -7,6 +7,7 @@ const themeStorage = createStringStorageAdapter(THEME_STORAGE_KEY)
 export const themeSettingsRepository = {
   load(): ThemeSettings {
     const mode = themeStorage.load()
+    if (mode === 'system') return { mode: 'dark' }
     return { mode: isThemeMode(mode) ? mode : 'dark' }
   },
   save(settings: ThemeSettings): void {
@@ -18,5 +19,5 @@ export const themeSettingsRepository = {
 } satisfies { load: () => ThemeSettings; save: (settings: ThemeSettings) => void; clear: () => void }
 
 export function isThemeMode(value: string | null): value is ThemeMode {
-  return value === 'dark' || value === 'light' || value === 'system'
+  return value === 'dark' || value === 'light' || value === 'amoled'
 }

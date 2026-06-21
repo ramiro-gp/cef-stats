@@ -71,7 +71,7 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
     {!group.seeded && entries.length === 0 && <section className="mt-6 rounded-2xl border border-dashed border-emerald-500/30 bg-emerald-500/[0.05] p-5 text-center"><p className="font-extrabold">Todavía no hay stats</p><p className="mt-1 text-sm text-slate-400">{personalScope ? 'Cargá tu primer partido. Podés crear un grupo más adelante para comparar con amigos.' : 'Cargá tu primer partido y el grupo empieza a tomar vida.'}</p><button onClick={() => onNavigate('add')} className="mt-4 min-h-11 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-ink">Cargar primer partido</button></section>}
 
     <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_.8fr]">
-      <section>
+      <section data-tour="home-activity">
         <div className="mb-3 flex items-center justify-between"><div><h2 className="font-extrabold">Movimientos recientes</h2><p className="mt-0.5 text-xs text-slate-400">Últimos {Math.min(10, feed.length)} de {allScope ? 'tus grupos' : group.name}</p></div><span className="h-2 w-2 rounded-full bg-emerald-500" /></div>
         <ActivityFeedPanel items={recentFeed} />
       </section>
