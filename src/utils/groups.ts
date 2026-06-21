@@ -1,10 +1,10 @@
 import type { Group } from '../types'
-import { createInviteToken } from './ids'
+import { compactInviteCode, createReadableInviteCode, formatInviteCode } from './inviteCodes'
 
 export function createUniqueGroupCode(_name: string, groups: Group[]): string {
-  const existing = new Set(groups.map(group => group.code.toUpperCase()))
-  let code = `CEF-${createInviteToken()}`
-  while (existing.has(code)) code = `CEF-${createInviteToken()}`
+  const existing = new Set(groups.map(group => compactInviteCode(group.code)))
+  let code = createReadableInviteCode()
+  while (existing.has(compactInviteCode(code))) code = createReadableInviteCode()
   return code
 }
 
@@ -18,13 +18,13 @@ export function extractGroupInviteCode(value: string): string {
   try {
     const url = new URL(trimmed)
     const queryCode = url.searchParams.get('joinGroup') ?? url.searchParams.get('groupCode')
-    if (queryCode) return queryCode.trim().toUpperCase()
+    if (queryCode) return formatInviteCode(queryCode)
     const pathMatch = url.pathname.match(/\/join\/(?:group\/)?([^/?#]+)/i)
-    return pathMatch ? decodeURIComponent(pathMatch[1]).trim().toUpperCase() : ''
+    return pathMatch ? formatInviteCode(decodeURIComponent(pathMatch[1])) : ''
   } catch {
     const pathMatch = trimmed.match(/\/join\/(?:group\/)?([^/?#]+)/i)
     const rawCode = pathMatch?.[1] ?? trimmed
-    return decodeURIComponent(rawCode).split(/[?#]/)[0].trim().toUpperCase()
+    return formatInviteCode(decodeURIComponent(rawCode).split(/[?#]/)[0])
   }
 }
 

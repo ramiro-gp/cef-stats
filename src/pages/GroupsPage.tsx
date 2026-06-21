@@ -5,6 +5,7 @@ import type { Group, GroupMemberView } from '../types'
 import { createGroupInviteLink } from '../utils/groups'
 import { defaultGroupEmoji, groupEmojiOptions } from '../data/groupEmojiOptions'
 import { UserAvatar } from '../components/UserAvatar'
+import { formatInviteCodeInput } from '../utils/inviteCodes'
 
 interface Props {
   groups: Group[]
@@ -89,7 +90,7 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
           <h3 className="font-extrabold">{mode === 'create' ? 'Nuevo grupo' : mode === 'join' ? 'Unirme a un grupo' : 'Editar grupo'}</h3>
           <p className="mt-1 text-sm text-slate-400">{mode === 'join' ? 'Pegá el código o link de invitación.' : 'Elegí un nombre corto y reconocible.'}</p>
           <label className="mt-4 block text-xs font-bold text-slate-400">{mode === 'join' ? 'Código' : 'Nombre del grupo'}</label>
-          <input autoFocus value={value} disabled={submitting} onChange={event => setValue(event.target.value)} placeholder={mode === 'join' ? 'CEF-XXXXXXXXXXXX o https://...' : 'Fútbol del martes'} className={`mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 disabled:opacity-50 dark:border-white/10 ${mode === 'join' ? 'font-mono tracking-wide' : ''}`} />
+          <input autoFocus value={value} disabled={submitting} onChange={event => setValue(mode === 'join' ? formatInviteCodeInput(event.target.value) : event.target.value)} placeholder={mode === 'join' ? 'H63K-81HY o link de invitación' : 'Fútbol del martes'} className={`mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 disabled:opacity-50 dark:border-white/10 ${mode === 'join' ? 'font-mono tracking-wide' : ''}`} />
           {mode !== 'join' && <div className="mt-4"><p className="text-xs font-bold text-slate-400">Emoji del grupo</p><div className="mt-2 grid grid-cols-8 gap-1.5">{groupEmojiOptions.map(option => <button type="button" key={option} onClick={() => setEmoji(option)} aria-label={`Emoji ${option}`} aria-pressed={emoji === option} className={`grid aspect-square place-items-center rounded-xl border text-xl transition ${emoji === option ? 'border-emerald-500 bg-emerald-500/15 ring-1 ring-emerald-500' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/5'}`}>{option}</button>)}</div></div>}
           {error && <p className="mt-2 text-xs font-bold text-rose-500">{error}</p>}
           <button onClick={submit} disabled={submitting} className="mt-4 min-h-12 w-full rounded-xl bg-emerald-500 font-bold text-ink disabled:opacity-50">{submitting ? mode === 'create' ? 'Creando grupo...' : mode === 'join' ? 'Uniéndome...' : 'Guardando...' : mode === 'create' ? 'Crear y activar' : mode === 'join' ? 'Unirme y activar' : 'Guardar nombre'}</button>

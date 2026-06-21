@@ -32,10 +32,10 @@ export const productTours: Record<ProductTourId, ProductTourStep[]> = {
     { page: 'add', target: 'add-save', title: 'A la tabla', text: 'Guardá y Fulbo Stats actualiza temporada, ranking y racha.' },
   ],
   matches: [
-    { page: 'matches', target: 'matches-list', title: 'Tus partidos', text: 'Acá ves los partidos de lo que elegiste arriba y entrás a cada detalle.' },
-    { page: 'matches', target: 'matches-list', title: 'Creá o unite', text: 'Podés crear un partido nuevo o entrar a uno con su código o link.' },
-    { page: 'matches', target: 'matches-list', title: 'Dentro del partido', text: 'Al abrirlo podés elegir equipo, ver jugadores y consultar el resultado.' },
-    { page: 'matches', target: 'matches-list', title: 'Después de jugar', text: 'También podés comentar en FOROBARDO y cargar o vincular tus goles y asistencias.' },
+    { page: 'matches', target: 'matches-heading', title: 'Partidos del grupo elegido', text: 'Esta pantalla muestra los partidos del grupo que elegiste ver. En Personal aparecen los partidos sin grupo y en TODOS se juntan todos.' },
+    { page: 'matches', target: 'matches-create', title: 'Crear partido', text: 'Desde acá armás un partido nuevo, elegís horario, formato, grupo y nombres de equipos.' },
+    { page: 'matches', target: 'matches-join', title: 'Unirme con código', text: 'Pegá un código o link para entrar a un partido que te compartieron.' },
+    { page: 'matches', target: 'matches-list', title: 'Abrir un partido', text: 'Tocá una tarjeta para elegir equipo, ver el resultado, comentar en FOROBARDO y cargar o vincular tus números.' },
   ],
   groups: [
     { page: 'groups', target: 'groups-list', title: 'Tus grupos', text: 'Entrá a un grupo, copiá su invitación o editá los que creaste.' },

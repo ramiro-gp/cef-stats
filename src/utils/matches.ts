@@ -1,4 +1,5 @@
 import type { Match, MatchFormat, MatchParticipant, MatchResult, MatchScore, MatchTeam, StatEntry, User } from '../types'
+import { formatInviteCode, inviteCodesEqual, isSupportedInviteCode } from './inviteCodes'
 
 const BASE_TEAM_SIZE: Record<MatchFormat, number> = { F5: 5, F6: 6, F7: 7, F8: 8, F11: 11 }
 
@@ -75,28 +76,28 @@ export function extractInviteCode(value: string): string {
   try {
     const url = new URL(trimmed)
     const queryCode = url.searchParams.get('match') ?? url.searchParams.get('code')
-    if (queryCode) return queryCode.trim().toUpperCase()
+    if (queryCode) return formatInviteCode(queryCode)
     const pathMatch = url.pathname.match(/\/match\/([^/?#]+)/i)
-    return pathMatch ? decodeURIComponent(pathMatch[1]).trim().toUpperCase() : ''
+    return pathMatch ? formatInviteCode(decodeURIComponent(pathMatch[1])) : ''
   } catch {
     const queryMatch = trimmed.match(/[?&](?:match|code)=([^&#]+)/i)
-    if (queryMatch) return decodeURIComponent(queryMatch[1]).trim().toUpperCase()
+    if (queryMatch) return formatInviteCode(decodeURIComponent(queryMatch[1]))
     const pathMatch = trimmed.match(/(?:^|\/)match\/([^/?#]+)/i)
-    if (pathMatch) return decodeURIComponent(pathMatch[1]).trim().toUpperCase()
+    if (pathMatch) return formatInviteCode(decodeURIComponent(pathMatch[1]))
     if (trimmed.includes('/') || trimmed.startsWith('?')) return ''
-    return trimmed.toUpperCase()
+    return formatInviteCode(trimmed)
   }
 }
 
 export function isValidMatchCode(value: string): boolean {
   const code = extractInviteCode(value)
-  return /^CEF-[A-Z0-9]{5}$/.test(code) || /^CEF-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{12}$/.test(code)
+  return isSupportedInviteCode(code)
 }
 
 export function findMatchByCode(matches: Match[], value: string): Match | null {
   if (!isValidMatchCode(value)) return null
   const code = extractInviteCode(value)
-  return matches.find(match => match.inviteCode.toUpperCase() === code) ?? null
+  return matches.find(match => inviteCodesEqual(match.inviteCode, code)) ?? null
 }
 
 export function getMatchResultForTeam(score?: MatchScore, team?: MatchTeam): MatchResult | null {

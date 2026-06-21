@@ -17,9 +17,10 @@ export function createInviteToken(length = 12): string {
 }
 
 export function createMatchInviteCode(existingCodes: string[]): string {
-  const existing = new Set(existingCodes.map(code => code.toUpperCase()))
+  const existing = new Set(existingCodes.map(code => code.toUpperCase().replace(/[^A-Z0-9]/g, '')))
   while (true) {
-    const code = `CEF-${createInviteToken()}`
-    if (!existing.has(code)) return code
+    const token = createInviteToken(8)
+    const code = `${token.slice(0, 4)}-${token.slice(4)}`
+    if (!existing.has(token)) return code
   }
 }

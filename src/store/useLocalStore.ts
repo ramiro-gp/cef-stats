@@ -3,6 +3,7 @@ import { availableGroups, defaultGroup, defaultUser } from '../data/seedData'
 import type { AppState, Group, GroupMember, Match, MatchEvent, MatchFormat, MatchParticipant, MatchResult, MatchScore, MatchTeam, StatEntry, User } from '../types'
 import { createUniqueGroupCode, normalizeGroupCode } from '../utils/groups'
 import { createId, createMatchInviteCode, createStatEntryId } from '../utils/ids'
+import { inviteCodesEqual } from '../utils/inviteCodes'
 import { normalizeHandle } from '../utils/identity'
 import { isTeamFull } from '../utils/matches'
 import { getActiveGroup, hasDuplicateMatchEntry } from '../utils/selectors'
@@ -75,7 +76,7 @@ export function useLocalStore() {
     const code = normalizeGroupCode(rawCode)
     let joined!: Group
     setState(current => {
-      const existing = current.groups.find(item => item.code.toUpperCase() === code)
+      const existing = current.groups.find(item => inviteCodesEqual(item.code, code))
       if (existing) {
         joined = existing
         const alreadyMember = current.groupMembers.some(member => member.groupId === existing.id && member.userId === current.user.id)

@@ -27,6 +27,7 @@ function Counter({ label, value, onChange }: { label: string; value: number; onC
 interface Props {
   onSave: (values: Parameters<AddStatEntry>[0], contextId: string) => ReturnType<AddStatEntry>
   onNavigate: (page: Page) => void
+  onNotify: (text: string, tone?: 'success' | 'error') => void
   matches: Match[]
   groups: Group[]
   entries: StatEntry[]
@@ -35,7 +36,7 @@ interface Props {
   personalContextId?: string
 }
 
-export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, user, defaultContextId = '', personalContextId = '' }: Props) {
+export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, entries, user, defaultContextId = '', personalContextId = '' }: Props) {
   const initialMatchType = user.defaultMatchType === 'ask' ? 'friendly' : user.defaultMatchType
   const initialFormat = user.defaultFootballFormat === 'ask' ? 'F5' : user.defaultFootballFormat
   const [result, setResult] = useState<MatchResult | null>(null)
@@ -62,9 +63,12 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
     try {
       await onSave({ result: linked?.automaticResult ?? result, goals, assists, matchId: linked?.match.id, team: linked?.team, matchType, footballFormat, playedPosition: positionRelevant && playedPosition ? playedPosition : undefined }, contextId)
       setSaved(true)
-      window.setTimeout(() => onNavigate('home'), 1200)
+      onNotify('Stats cargadas correctamente.')
+      onNavigate('home')
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'No pudimos guardar las stats.')
+      const message = reason instanceof Error ? reason.message : 'No pudimos guardar las stats.'
+      setError(message)
+      onNotify(message, 'error')
     } finally {
       setSaving(false)
     }
