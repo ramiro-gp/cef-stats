@@ -222,6 +222,12 @@ export const supabaseRepository = {
     return { entries: (result.data as StatEntryRow[]).map(toStatEntry), total: result.count ?? 0 }
   },
 
+  async listUserSeasonEntries(userId: string): Promise<StatEntry[]> {
+    const result = await client().from('stat_entries').select(statColumns).eq('user_id', userId).order('played_at', { ascending: false })
+    if (result.error) throw new Error(statError(result.error.message))
+    return (result.data as StatEntryRow[]).map(toStatEntry)
+  },
+
   async createStatEntry(scope: StatScope, input: StatEntryInput): Promise<StatEntry> {
     if (!scope.userId) throw new Error('Necesitás iniciar sesión para guardar stats.')
     if (scope.type === 'all') throw new Error('Elegí un grupo específico o Mi historial para cargar stats.')

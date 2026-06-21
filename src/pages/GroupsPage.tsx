@@ -10,6 +10,7 @@ interface Props {
   groups: Group[]
   currentGroup: Group | null
   members?: GroupMemberView[]
+  memberships?: GroupMemberView[]
   currentUserId?: string
   remoteMode?: boolean
   loading?: boolean
@@ -21,7 +22,7 @@ interface Props {
   onUpdateGroup: (id: string, values: Partial<Pick<Group, 'name' | 'emoji'>>) => void | Promise<void>
 }
 
-export function GroupsPage({ groups, currentGroup, members = [], currentUserId, remoteMode = false, loading = false, membersLoading = false, loadError = '', onSelectGroup, onCreateGroup, onJoinGroup, onUpdateGroup }: Props) {
+export function GroupsPage({ groups, currentGroup, members = [], memberships = [], currentUserId, remoteMode = false, loading = false, membersLoading = false, loadError = '', onSelectGroup, onCreateGroup, onJoinGroup, onUpdateGroup }: Props) {
   const [mode, setMode] = useState<'list' | 'create' | 'join' | 'edit'>('list')
   const [value, setValue] = useState('')
   const [editing, setEditing] = useState<Group | null>(null)
@@ -29,8 +30,7 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [emoji, setEmoji] = useState(defaultGroupEmoji)
-  const currentMembership = members.find(member => member.userId === currentUserId)
-  const canEdit = !remoteMode || currentMembership?.role === 'owner' || currentMembership?.role === 'admin'
+  const canEditGroup = (groupId: string) => !remoteMode || memberships.some(member => member.groupId === groupId && member.userId === currentUserId && member.role === 'owner')
 
   const open = (nextMode: typeof mode, group?: Group) => { setMode(nextMode); setEditing(group ?? null); setValue(group?.name ?? ''); setEmoji(group?.emoji || defaultGroupEmoji); setError('') }
   const copy = (group: Group) => {
@@ -71,7 +71,7 @@ export function GroupsPage({ groups, currentGroup, members = [], currentUserId, 
                 <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="truncate font-bold">{group.name}</span>{active && <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-ink">Activo</span>}</div><div className="mt-1 text-xs text-slate-400">{group.memberCount} jugadores · Código {group.code}</div></div>
               </button>
               <button onClick={() => copy(group)} aria-label={`Copiar invitación de ${group.name}`} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 dark:border-white/10">{copied === group.id ? <CheckIcon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}</button>
-              {canEdit && <button onClick={() => open('edit', group)} className="min-h-10 shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-white/10">Editar</button>}
+              {canEditGroup(group.id) && <button onClick={() => open('edit', group)} className="min-h-10 shrink-0 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-white/10">Editar</button>}
             </div>
           })}
         </section>

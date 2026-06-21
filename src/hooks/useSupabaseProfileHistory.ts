@@ -11,6 +11,7 @@ export function useSupabaseProfileHistory(userId: string | null) {
   const requestId = useRef(0)
   const page = pageState.userId === userId ? pageState.page : 1
   const [entries, setEntries] = useState<StatEntry[]>([])
+  const [seasonEntries, setSeasonEntries] = useState<StatEntry[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(Boolean(userId))
   const [error, setError] = useState('')
@@ -19,6 +20,7 @@ export function useSupabaseProfileHistory(userId: string | null) {
     const currentRequestId = ++requestId.current
     if (!userId) {
       setEntries([])
+      setSeasonEntries([])
       setTotal(0)
       setLoading(false)
       setError('')
@@ -27,7 +29,10 @@ export function useSupabaseProfileHistory(userId: string | null) {
     setLoading(true)
     setError('')
     try {
-      const result = await supabaseRepository.listUserStatEntries(userId, page, PAGE_SIZE, filters)
+      const [result, loadedSeasonEntries] = await Promise.all([
+        supabaseRepository.listUserStatEntries(userId, page, PAGE_SIZE, filters),
+        supabaseRepository.listUserSeasonEntries(userId),
+      ])
       const totalPages = Math.max(1, Math.ceil(result.total / PAGE_SIZE))
       if (currentRequestId !== requestId.current) return
       if (page > totalPages) {
@@ -35,6 +40,7 @@ export function useSupabaseProfileHistory(userId: string | null) {
         return
       }
       setEntries(result.entries)
+      setSeasonEntries(loadedSeasonEntries)
       setTotal(result.total)
     } catch (reason) {
       if (currentRequestId === requestId.current) setError(reason instanceof Error ? reason.message : 'No pudimos cargar tu historial.')
@@ -48,5 +54,5 @@ export function useSupabaseProfileHistory(userId: string | null) {
   const setPage = (nextPage: number) => setPageState({ userId, page: nextPage })
   const updateFilters = (nextFilters: StatFilters) => { setFilters(nextFilters); setPageState({ userId, page: 1 }) }
 
-  return { entries, total, page, pageSize: PAGE_SIZE, loading, error, filters, setFilters: updateFilters, setPage, reload: load }
+  return { entries, seasonEntries, total, page, pageSize: PAGE_SIZE, loading, error, filters, setFilters: updateFilters, setPage, reload: load }
 }
