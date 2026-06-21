@@ -12,5 +12,7 @@ export function useTheme() {
     themeSettingsRepository.save({ mode: theme })
   }, [dark, theme])
 
-  return { theme, setTheme, dark }
+  const cycleTheme = () => setTheme(current => current === 'light' ? 'dark' : current === 'dark' ? 'amoled' : 'light')
+
+  return { theme, setTheme, cycleTheme, dark }
 }

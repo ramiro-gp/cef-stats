@@ -76,3 +76,18 @@ html.theme-amoled #root {
   .animate-ticker-in,
   .ticker-marquee-track { animation: none; }
 }
+
+@media print {
+  @page { margin: 14mm; }
+  body * { visibility: hidden !important; }
+  .guide-dialog,
+  .guide-dialog * { visibility: visible !important; }
+  .guide-dialog { position: absolute !important; inset: 0 !important; display: block !important; background: #fff !important; }
+  .user-guide-print-root { position: absolute !important; inset: 0 !important; max-height: none !important; max-width: none !important; overflow: visible !important; border: 0 !important; border-radius: 0 !important; background: #fff !important; color: #111827 !important; box-shadow: none !important; }
+  .user-guide-print-root * { color: #111827 !important; }
+  .user-guide-print-root h1,
+  .user-guide-print-root h2,
+  .user-guide-print-root a { color: #047857 !important; }
+  .guide-section { break-inside: avoid; }
+  .no-print { display: none !important; }
+}

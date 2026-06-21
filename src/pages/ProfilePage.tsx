@@ -3,6 +3,7 @@ import { FireIcon, LogoutIcon, MedalIcon, TrophyIcon } from '../components/icons
 import { PageTitle } from '../components/PageTitle'
 import { ProfileEditor } from '../components/ProfileEditor'
 import { SettingsSheet } from '../components/SettingsSheet'
+import { UserGuideSheet } from '../components/UserGuideSheet'
 import { StatEntryEditor } from '../components/StatEntryEditor'
 import { LinkEntrySheet } from '../components/LinkEntrySheet'
 import type { Group, Match, MatchResult, MatchTeam, PersonalWorldCupState, StatEntry, ThemeMode, User } from '../types'
@@ -53,6 +54,7 @@ interface Props {
 export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, onStartTour, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<StatEntry | null>(null)
   const [linkEntry, setLinkEntry] = useState<StatEntry | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -129,6 +131,7 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
     {editingProfile && <ProfileEditor user={user} accountMode={accountMode} onSave={onSaveUser} onClose={() => setEditingProfile(false)} />}
     {selectedEntry && <StatEntryEditor entry={selectedEntry} onSave={values => onUpdateEntry(selectedEntry.id, values)} onDelete={() => onDeleteEntry(selectedEntry.id)} onClose={() => setSelectedEntry(null)} />}
     {linkEntry && <LinkEntrySheet entry={linkEntry} matches={matches} groups={groups} allEntries={allEntries} onLink={onLinkEntry} onEditExisting={entry => setSelectedEntry(entry)} onClose={() => setLinkEntry(null)} />}
-    {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onStartTour={onStartTour} onClose={() => setSettingsOpen(false)} />}
+    {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onStartTour={onStartTour} onOpenGuide={() => setGuideOpen(true)} onClose={() => setSettingsOpen(false)} />}
+    {guideOpen && <UserGuideSheet onClose={() => setGuideOpen(false)} />}
   </>
 }

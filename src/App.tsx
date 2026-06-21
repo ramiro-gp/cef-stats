@@ -66,7 +66,7 @@ export default function App() {
   const auth = useAuth()
   const location = useLocation()
   const routerNavigate = useNavigate()
-  const { theme, setTheme, dark } = useTheme()
+  const { theme, setTheme, cycleTheme } = useTheme()
   const accountMode = Boolean(auth.user && auth.profile)
   const activePage = pageFromPathname(location.pathname)
   const matchRouteId = matchPath('/partidos/:matchId', location.pathname)?.params.matchId ?? null
@@ -291,7 +291,7 @@ export default function App() {
     <Route path="*" element={<NotFoundPage onHome={() => navigate('home')} onMatches={() => navigate('matches')} />} />
   </Routes>
 
-  return <AppShell page={activePage} user={currentUser} group={group} groups={groups} dark={dark} onTheme={() => setTheme(dark ? 'light' : 'dark')} onSelectGroup={selectGroup} onNavigate={navigate}>
+  return <AppShell page={activePage} user={currentUser} group={group} groups={groups} theme={theme} onTheme={cycleTheme} onSelectGroup={selectGroup} onNavigate={navigate}>
     {activePage && accountMode && remoteStats.loading ? <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando stats...</div> : <>{accountMode && remoteStats.error && activePage !== 'profile' && <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-500">{remoteStats.error}</div>}<Suspense fallback={<PageLoading />}>{routedContent}</Suspense></>}
     {activeTour && <ProductTour tourId={activeTour} activePage={activePage} onNavigate={navigate} onClose={closeTour} />}
   </AppShell>

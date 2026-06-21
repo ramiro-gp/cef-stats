@@ -10,6 +10,7 @@ export const UserIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="12" 
 export const UsersIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 4.3a3 3 0 0 1 0 5.4M17 14a5 5 0 0 1 4 5"/></svg>
 export const SunIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/></svg>
 export const MoonIcon = (p: IconProps) => <svg {...base} {...p}><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.5 6.5 0 0 0 21 12.8Z"/></svg>
+export const AmoledIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="12" cy="12" r="8" fill="currentColor" stroke="currentColor"/><circle cx="12" cy="12" r="10" opacity=".35"/></svg>
 export const ChevronRight = (p: IconProps) => <svg {...base} {...p}><path d="m9 18 6-6-6-6"/></svg>
 export const ArrowUpIcon = (p: IconProps) => <svg {...base} {...p}><path d="m18 9-6-6-6 6M12 3v18"/></svg>
 export const FireIcon = (p: IconProps) => <svg {...base} {...p}><path d="M12 22c4.4 0 8-3.1 8-7.6 0-3.3-2-6.4-5.1-8.5.1 2.3-1 3.8-2.2 4.6.3-3.8-1.7-6.5-4.3-8.5.2 3.6-4.4 6.1-4.4 11.9C4 18.7 7.6 22 12 22Z"/><path d="M9.5 18.5c0-2 1.5-3.2 2.5-4.8.4 1.7 2.5 2.5 2.5 4.8"/></svg>

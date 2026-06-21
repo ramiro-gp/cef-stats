@@ -1,8 +1,8 @@
-import type { Group, Page, User } from '../types'
+import type { Group, Page, ThemeMode, User } from '../types'
 import { Logo } from './Logo'
 import { BottomNav } from './BottomNav'
 import { GroupSelector } from './GroupSelector'
-import { CalendarIcon, HomeIcon, MoonIcon, PlusCircleIcon, SunIcon, TrophyIcon, UserIcon, UsersIcon } from './icons'
+import { AmoledIcon, CalendarIcon, HomeIcon, MoonIcon, PlusCircleIcon, SunIcon, TrophyIcon, UserIcon, UsersIcon } from './icons'
 import { isAllScope, isPersonalScope } from '../utils/scopes'
 import { appVersion } from '../config/appVersion'
 import { UserAvatar } from './UserAvatar'
@@ -21,16 +21,17 @@ interface Props {
   user: User
   group: Group | null
   groups: Group[]
-  dark: boolean
+  theme: ThemeMode
   onTheme: () => void
   onSelectGroup: (group: Group) => void
   onNavigate: (page: Page) => void
   children: React.ReactNode
 }
 
-export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGroup, onNavigate, children }: Props) {
+export function AppShell({ page, user, group, groups, theme, onTheme, onSelectGroup, onNavigate, children }: Props) {
   const personalScope = group ? isPersonalScope(group) : false
   const allScope = group ? isAllScope(group) : false
+  const nextTheme = theme === 'light' ? 'Oscuro' : theme === 'dark' ? 'AMOLED' : 'Claro'
   return <div className="min-h-dvh bg-slate-50 text-slate-950 transition-colors dark:bg-ink dark:text-white">
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-200 bg-white p-6 dark:border-white/10 dark:bg-[#09130f] lg:flex">
       <button type="button" onClick={() => onNavigate('home')} aria-label="Ir al inicio" className="w-fit text-left"><Logo /></button>
@@ -52,7 +53,7 @@ export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGro
           <button type="button" onClick={() => onNavigate('home')} aria-label="Ir al inicio" className="shrink-0 lg:hidden"><Logo compact /></button>
           <div data-tour="app-scope" className="min-w-0 flex-1 lg:flex-none"><GroupSelector activeGroup={group} groups={groups} onSelect={onSelectGroup} /></div>
           <div className="ml-auto flex items-center gap-2">
-            <button onClick={onTheme} aria-label={dark ? 'Activar modo claro' : 'Activar modo oscuro'} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:text-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">{dark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}</button>
+            <button onClick={onTheme} aria-label={`Modo actual: ${theme === 'light' ? 'Claro' : theme === 'dark' ? 'Oscuro' : 'AMOLED'}. Cambiar a ${nextTheme}`} title={`Cambiar a ${nextTheme}`} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:text-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">{theme === 'light' ? <SunIcon className="h-5 w-5" /> : theme === 'dark' ? <MoonIcon className="h-5 w-5" /> : <AmoledIcon className="h-5 w-5" />}</button>
             <button data-tour="nav-profile" onClick={() => onNavigate('profile')} aria-label="Abrir mi perfil" title="Mi perfil" className="rounded-full transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><UserAvatar value={user.avatar} fallback={user.initials} className="h-10 w-10 rounded-full text-sm" /></button>
           </div>
         </div>
