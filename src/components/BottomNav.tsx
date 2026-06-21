@@ -14,7 +14,7 @@ export function BottomNav({ page, onNavigate }: { page: Page | null; onNavigate:
     <div className="mx-auto grid max-w-lg grid-cols-5">
       {items.map(({ page: itemPage, label, icon: Icon }) => {
         const active = page === itemPage
-        return <button key={itemPage} onClick={() => onNavigate(itemPage)} className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${active ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
+        return <button data-tour={`nav-${itemPage}`} key={itemPage} onClick={() => onNavigate(itemPage)} className={`relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl text-[11px] font-semibold transition ${active ? 'text-emerald-500' : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}>
           {active && <span className="absolute top-0 h-1 w-5 rounded-full bg-emerald-500" />}
           <Icon className={active ? 'stroke-[2.4]' : ''} />
           {label}

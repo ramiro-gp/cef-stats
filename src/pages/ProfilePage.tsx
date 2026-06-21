@@ -15,6 +15,7 @@ import { UserAvatar } from '../components/UserAvatar'
 import { ShareProfileCardButton } from '../components/ShareProfileCardButton'
 import { StatFilterControls } from '../components/StatFilterControls'
 import { DEFAULT_STAT_FILTERS, filterStatEntries, type StatFilters } from '../utils/statFilters'
+import type { ProductTourId } from '../config/productTours'
 
 interface Props {
   user: User
@@ -37,6 +38,7 @@ interface Props {
   accountMode?: boolean
   statsError?: string
   onOpenMatch: (matchId: string) => void
+  onStartTour: (tourId: ProductTourId) => void
   historyEntries?: StatEntry[]
   historyTotal?: number
   historyPage?: number
@@ -48,7 +50,7 @@ interface Props {
   onHistoryPageChange?: (page: number) => void
 }
 
-export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
+export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, onStartTour, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<StatEntry | null>(null)
@@ -89,10 +91,10 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
   const profileTitle = user.nickname && user.nickname !== user.name ? `${user.name} “${user.nickname}”` : user.name
 
   return <>
-    <div className="mb-6 flex items-start justify-between gap-3"><PageTitle eyebrow="Mi perfil" title={profileTitle} subtitle={`${user.position || 'Sin posición'} · ${group.name}`} /><button onClick={() => setSettingsOpen(true)} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">Ajustes</button></div>
+    <div className="mb-6 flex items-start justify-between gap-3"><PageTitle eyebrow="Mi perfil" title={profileTitle} subtitle={`${user.position || 'Sin posición'} · ${group.name}`} /><button data-tour="profile-settings" onClick={() => setSettingsOpen(true)} className="min-h-11 shrink-0 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">Ajustes</button></div>
     <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
       <div className="space-y-4">
-        <section className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-6 text-white">
+        <section data-tour="profile-card" className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-6 text-white">
           <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
           <div className="relative flex items-center gap-4"><div className="relative shrink-0"><UserAvatar value={user.avatar} fallback={user.initials} className="h-20 w-20 rounded-3xl text-2xl" />{globalScoringStreakRecord > 0 && <span className="absolute -right-2 -top-2 rounded-full border border-orange-300/30 bg-orange-500 px-2 py-1 text-[10px] font-black text-white shadow-lg">🔥 ×{globalScoringStreakRecord}</span>}{globalWorldCupsWon > 0 && <span className="absolute -bottom-2 -right-2 rounded-full border border-violet-300/30 bg-violet-500 px-2 py-1 text-[10px] font-black text-white shadow-lg">🏆 ×{globalWorldCupsWon}</span>}</div><div className="min-w-0"><div className="truncate text-xl font-black">{user.name}</div><div className="mt-1 text-sm font-semibold text-emerald-400">{user.position || 'Sin posición'}</div><div className="mt-0.5 text-sm text-slate-400">@{user.username.replace(/^@/, '')}</div></div></div>
           <div className="relative mt-6 grid grid-cols-3 divide-x divide-white/10 text-center"><div><div className="text-xl font-black">{totals.goals}</div><div className="text-[10px] text-slate-500">Goles</div></div><div><div className="text-xl font-black">{totals.assists}</div><div className="text-[10px] text-slate-500">Asist.</div></div><div><div className="text-xl font-black">{totals.matches}</div><div className="text-[10px] text-slate-500">Partidos</div></div></div>
@@ -106,7 +108,7 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
           <div className="mt-3 text-[11px] text-slate-400">Mundiales ganados: <strong className="text-violet-500">{worldCup.worldCupsWon}</strong></div>
         </section>
       </div>
-      <div>
+      <div data-tour="profile-history">
         <div className="mb-5 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><FireIcon className="h-5 w-5 text-orange-500"/><div className="mt-4 text-2xl font-black">{globalScoringStreakRecord}</div><div className="text-xs text-slate-400">Récord goleador</div></div><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><TrophyIcon className="h-5 w-5 text-emerald-500"/><div className="mt-4 text-2xl font-black">{totals.winRate}%</div><div className="text-xs text-slate-400">Partidos ganados</div></div></div>
         <div className="mb-3 flex items-center justify-between"><div><h2 className="font-extrabold">Mi historial de cargas</h2><p className="mt-0.5 text-xs text-slate-400">Sólo tus números, en todos los scopes disponibles.</p></div><span className="text-xs text-slate-400">{totalHistoryEntries} {accountMode ? 'en Supabase' : 'locales'}</span></div>
         <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><StatFilterControls filters={activeHistoryFilters} onChange={changeHistoryFilters} /></section>
@@ -127,6 +129,6 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
     {editingProfile && <ProfileEditor user={user} accountMode={accountMode} onSave={onSaveUser} onClose={() => setEditingProfile(false)} />}
     {selectedEntry && <StatEntryEditor entry={selectedEntry} onSave={values => onUpdateEntry(selectedEntry.id, values)} onDelete={() => onDeleteEntry(selectedEntry.id)} onClose={() => setSelectedEntry(null)} />}
     {linkEntry && <LinkEntrySheet entry={linkEntry} matches={matches} groups={groups} allEntries={allEntries} onLink={onLinkEntry} onEditExisting={entry => setSelectedEntry(entry)} onClose={() => setLinkEntry(null)} />}
-    {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onClose={() => setSettingsOpen(false)} />}
+    {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onStartTour={onStartTour} onClose={() => setSettingsOpen(false)} />}
   </>
 }

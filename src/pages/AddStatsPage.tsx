@@ -73,19 +73,19 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
   return <div className="mx-auto max-w-2xl">
     <PageTitle eyebrow="Carga rápida" title="¿Cómo te fue hoy?" subtitle="Tres toques y listo. Sin vueltas." />
     <div className="space-y-5">
-      <section className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
+      <section data-tour="add-context" className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
         <label className="block"><span className="text-xs font-bold uppercase tracking-wider text-emerald-500">Estás cargando dentro de</span><select value={contextId} onChange={event => { setContextId(event.target.value); setLinked(null) }} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí un contexto</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}{personalContextId && <option value={personalContextId}>Personal (sin grupo)</option>}</select></label>
         {contextName && <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Esta carga se guardará en {contextName}.</p>}
         <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">El grupo que elijas verá tu carga. Si jugaste sin nadie de tu grupo, poné Personal.</p>
         <p className="mt-1 text-[11px] leading-5 text-slate-400">Si no aparece ningún grupo, <button type="button" onClick={() => onNavigate('groups')} className="font-bold text-emerald-500 underline underline-offset-2">creá o unite a uno</button>.</p>
       </section>
 
-      <section>
+      <section data-tour="add-result">
         <div className="mb-3 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-xs font-black text-ink">1</span><h2 className="text-sm font-bold">Resultado <span className="text-emerald-500">*</span></h2></div>
         <div className="grid grid-cols-3 gap-2.5">{resultOptions.map(option => <button type="button" key={option.value} disabled={Boolean(linked?.automaticResult)} onClick={() => setResult(option.value)} className={`relative min-h-24 rounded-2xl border p-3 text-center transition active:scale-[.97] disabled:cursor-default ${result === option.value ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500' : 'border-slate-200 bg-white hover:border-emerald-500/40 dark:border-white/10 dark:bg-white/[0.04]'}`}>{result === option.value && <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-ink"><CheckIcon className="h-3.5 w-3.5 stroke-[3]" /></span>}<span className="block text-2xl">{option.emoji}</span><span className="mt-2 block text-sm font-bold">{option.label}</span></button>)}</div>
       </section>
 
-      <section>
+      <section data-tour="add-numbers">
         <div className="mb-3 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-xs font-black text-ink">2</span><h2 className="text-sm font-bold">Tus números</h2></div>
         <div className="space-y-3"><Counter label="Goles" value={goals} onChange={setGoals} /><Counter label="Asistencias" value={assists} onChange={setAssists} /></div>
       </section>
@@ -103,7 +103,7 @@ export function AddStatsPage({ onSave, onNavigate, matches, groups, entries, use
 
       <div className="rounded-2xl bg-slate-100 p-4 text-xs text-slate-500 dark:bg-white/[0.04] dark:text-slate-400"><FireIcon className="mr-2 inline h-4 w-4 text-orange-500" />Guardá tus números y actualizamos tu racha.</div>
       {error && <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{error}</div>}
-      <button type="button" onClick={() => void save()} disabled={!result || !contextId || saved || saving} className="flex min-h-16 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 font-extrabold text-ink shadow-glow transition hover:bg-emerald-400 active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-slate-600">{saved ? <><CheckIcon /> ¡Stats guardadas!</> : saving ? 'Guardando...' : 'Guardar stats'}</button>
+      <button data-tour="add-save" type="button" onClick={() => void save()} disabled={!result || !contextId || saved || saving} className="flex min-h-16 w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 font-extrabold text-ink shadow-glow transition hover:bg-emerald-400 active:scale-[.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none dark:disabled:bg-white/10 dark:disabled:text-slate-600">{saved ? <><CheckIcon /> ¡Stats guardadas!</> : saving ? 'Guardando...' : 'Guardar stats'}</button>
       {!result && <p className="-mt-2 text-center text-xs text-slate-400">Elegí un resultado para poder guardar</p>}
       {!contextId && <p className="-mt-2 text-center text-xs text-slate-400">Elegí dónde guardar la carga.</p>}
     </div>

@@ -41,6 +41,15 @@
   will-change: transform;
 }
 
+.product-tour-highlight {
+  position: relative !important;
+  z-index: 70 !important;
+  border-radius: 1rem;
+  outline: 3px solid rgb(16 185 129);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 8px rgb(16 185 129 / 0.18), 0 18px 45px rgb(0 0 0 / 0.3) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-ticker-in,
   .ticker-marquee-track { animation: none; }

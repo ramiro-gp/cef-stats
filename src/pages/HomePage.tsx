@@ -35,7 +35,7 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
   const tickerMessages = buildGroupBannerMessages(group, rankings, user, totals, worldCup, entries.length, matches, entries, playerGroupIds)
 
   return <>
-    <section className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-5 text-white shadow-xl dark:border dark:border-white/5 sm:p-7">
+    <section data-tour="home-hero" className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-5 text-white shadow-xl dark:border dark:border-white/5 sm:p-7">
       <div className="absolute -right-10 -top-16 h-48 w-48 rounded-full bg-emerald-500/20 blur-3xl" />
       <div className="relative">
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-400">{group.name}</p>
@@ -54,7 +54,7 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
 
     <GroupTicker key={group.id} messages={tickerMessages} />
 
-    <section className="mt-6">
+    <section data-tour="home-season" className="mt-6">
       <div className="mb-3 flex items-center justify-between"><h2 className="font-extrabold">Mi temporada</h2><span className="text-xs text-slate-400">{totals.matches} partidos</span></div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[

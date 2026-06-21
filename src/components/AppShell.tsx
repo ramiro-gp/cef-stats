@@ -36,7 +36,7 @@ export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGro
       <button type="button" onClick={() => onNavigate('home')} aria-label="Ir al inicio" className="w-fit text-left"><Logo /></button>
       <p className="mt-2 text-xs text-slate-400">Tu fútbol, en números.</p>
       <nav className="mt-10 space-y-2">
-        {desktopItems.map(({ page: itemPage, label, icon: Icon }) => <button key={itemPage} onClick={() => onNavigate(itemPage)} className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition ${page === itemPage ? 'bg-emerald-500 text-ink shadow-glow' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5'}`}><Icon />{label}</button>)}
+        {desktopItems.map(({ page: itemPage, label, icon: Icon }) => <button data-tour={`nav-${itemPage}`} key={itemPage} onClick={() => onNavigate(itemPage)} className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-semibold transition ${page === itemPage ? 'bg-emerald-500 text-ink shadow-glow' : 'text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5'}`}><Icon />{label}</button>)}
       </nav>
       <div className="mt-auto rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
         <div className="text-xs font-bold uppercase tracking-widest text-emerald-500">Estás viendo</div>
@@ -50,10 +50,10 @@ export function AppShell({ page, user, group, groups, dark, onTheme, onSelectGro
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-slate-50/90 px-3 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-ink/90 sm:px-4 lg:px-8">
         <div className="mx-auto flex max-w-6xl items-center gap-2">
           <button type="button" onClick={() => onNavigate('home')} aria-label="Ir al inicio" className="shrink-0 lg:hidden"><Logo compact /></button>
-          <div className="min-w-0 flex-1 lg:flex-none"><GroupSelector activeGroup={group} groups={groups} onSelect={onSelectGroup} /></div>
+          <div data-tour="app-scope" className="min-w-0 flex-1 lg:flex-none"><GroupSelector activeGroup={group} groups={groups} onSelect={onSelectGroup} /></div>
           <div className="ml-auto flex items-center gap-2">
             <button onClick={onTheme} aria-label={dark ? 'Activar modo claro' : 'Activar modo oscuro'} className="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:text-emerald-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">{dark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}</button>
-            <button onClick={() => onNavigate('profile')} aria-label="Abrir mi perfil" title="Mi perfil" className="rounded-full transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><UserAvatar value={user.avatar} fallback={user.initials} className="h-10 w-10 rounded-full text-sm" /></button>
+            <button data-tour="nav-profile" onClick={() => onNavigate('profile')} aria-label="Abrir mi perfil" title="Mi perfil" className="rounded-full transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50"><UserAvatar value={user.avatar} fallback={user.initials} className="h-10 w-10 rounded-full text-sm" /></button>
           </div>
         </div>
       </header>

@@ -22,6 +22,8 @@ import { matchInviteIntentRepository } from './data/matchInviteIntentRepository'
 import { AuthSplash } from './components/AuthSplash'
 import { pageFromPathname, pagePaths } from './config/routes'
 import { supabaseRepository } from './data/supabaseRepository'
+import { ProductTour } from './components/ProductTour'
+import { hasSeenInitialTour, markInitialTourSeen, type ProductTourId } from './config/productTours'
 
 const AddStatsPage = lazy(() => import('./pages/AddStatsPage').then(module => ({ default: module.AddStatsPage })))
 const GroupsPage = lazy(() => import('./pages/GroupsPage').then(module => ({ default: module.GroupsPage })))
@@ -58,6 +60,7 @@ export default function App() {
   const [pendingGroupCode, setPendingGroupCode] = useState(initialGroupInviteCode)
   const [groupInviteError, setGroupInviteError] = useState('')
   const [pendingMatchCode, setPendingMatchCode] = useState(initialMatchInviteCode)
+  const [activeTour, setActiveTour] = useState<ProductTourId | null>(null)
   const attemptedGroupCode = useRef('')
   const store = useLocalStore()
   const auth = useAuth()
@@ -83,6 +86,12 @@ export default function App() {
     routerNavigate(pagePaths[next])
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  useEffect(() => {
+    if (!accountMode || activeTour || hasSeenInitialTour(currentUser.id)) return
+    const timeout = window.setTimeout(() => setActiveTour('general'), 500)
+    return () => window.clearTimeout(timeout)
+  }, [accountMode, activeTour, currentUser.id])
 
   useEffect(() => {
     if (pendingGroupCode) groupInviteIntentRepository.save(pendingGroupCode)
@@ -154,6 +163,11 @@ export default function App() {
       if (result.error) throw new Error(result.error)
     }
     routerNavigate('/login', { replace: true })
+  }
+
+  const closeTour = () => {
+    if (activeTour === 'general') markInitialTourSeen(currentUser.id)
+    setActiveTour(null)
   }
 
   if (!group) return <AuthSplash />
@@ -262,7 +276,7 @@ export default function App() {
     add: <AddStatsPage key={group.id} onSave={saveQuickStats} onNavigate={navigate} matches={accountMode ? allMatches : groupMatches} groups={accountMode ? remoteGroups.groups : store.groups} entries={accountMode ? scopeEntries : store.entries} user={currentUser} defaultContextId={accountMode ? remoteGroups.activeSharedGroup?.id ?? (personalScope ? remoteGroups.personalScope?.id ?? '' : '') : group.id} personalContextId={accountMode ? remoteGroups.personalScope?.id : undefined} />,
     matches: <MatchesPage group={group} user={currentUser} matches={matchRouteId ? allMatches : groupMatches} entries={accountMode ? remoteMatches.entries : groupEntries} initialMatchId={matchRouteId} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} creationGroups={accountMode ? remoteGroups.groups : []} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onCloseMatch={() => routerNavigate(pagePaths.matches, { replace: true })} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onParticipantTeam={accountMode ? remoteMatches.setParticipantTeam : store.setParticipantTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? async (matchId, values) => { const saved = await remoteMatches.saveStats(matchId, values); await Promise.all([profileHistory.reload(), remoteStats.reload()]); return saved } : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} />,
     rankings: <RankingsPage group={group} players={rankings} sourceEntries={rankingEntries} sourceUsers={accountMode ? rankingUsers : [currentUser]} currentUserId={currentUser.id} />,
-    profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? [...profileHistory.entries, ...remoteStats.entries] : store.entries} matches={accountMode ? allMatches : groupMatches} groups={groups} totals={globalTotals} worldCup={worldCup} globalScoringStreakRecord={globalScoringStreakRecord} globalWorldCupsWon={globalWorldCup.worldCupsWon} theme={theme} onSaveUser={saveUser} onUpdateEntry={updateProfileHistoryEntry} onDeleteEntry={deleteProfileHistoryEntry} onLinkEntry={linkEntry} onTheme={setTheme} onLogout={logout} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} historyEntries={accountMode ? profileHistory.entries : store.entries.filter(entry => entry.userId === currentUser.id)} historyTotal={accountMode ? profileHistory.total : undefined} historyPage={accountMode ? profileHistory.page : undefined} historyPageSize={profileHistory.pageSize} historyLoading={accountMode && profileHistory.loading} historyError={accountMode ? profileHistory.error : ''} historyFilters={accountMode ? profileHistory.filters : undefined} onHistoryFiltersChange={accountMode ? profileHistory.setFilters : undefined} onHistoryPageChange={accountMode ? profileHistory.setPage : undefined} />,
+    profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? [...profileHistory.entries, ...remoteStats.entries] : store.entries} matches={accountMode ? allMatches : groupMatches} groups={groups} totals={globalTotals} worldCup={worldCup} globalScoringStreakRecord={globalScoringStreakRecord} globalWorldCupsWon={globalWorldCup.worldCupsWon} theme={theme} onSaveUser={saveUser} onUpdateEntry={updateProfileHistoryEntry} onDeleteEntry={deleteProfileHistoryEntry} onLinkEntry={linkEntry} onTheme={setTheme} onLogout={logout} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onStartTour={setActiveTour} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} historyEntries={accountMode ? profileHistory.entries : store.entries.filter(entry => entry.userId === currentUser.id)} historyTotal={accountMode ? profileHistory.total : undefined} historyPage={accountMode ? profileHistory.page : undefined} historyPageSize={profileHistory.pageSize} historyLoading={accountMode && profileHistory.loading} historyError={accountMode ? profileHistory.error : ''} historyFilters={accountMode ? profileHistory.filters : undefined} onHistoryFiltersChange={accountMode ? profileHistory.setFilters : undefined} onHistoryPageChange={accountMode ? profileHistory.setPage : undefined} />,
     groups: <GroupsPage groups={accountMode ? remoteGroups.groups : groups} currentGroup={accountMode ? remoteGroups.activeSharedGroup : group} members={accountMode ? remoteGroups.members : localMembers} memberships={accountMode ? remoteGroups.allMembers : localMembers} currentUserId={accountMode ? auth.user!.id : currentUser.id} remoteMode={accountMode} loading={accountMode && remoteGroups.loading} membersLoading={accountMode && remoteGroups.membersLoading} loadError={accountMode ? groupInviteError || remoteGroups.error : ''} onSelectGroup={selectGroup} onCreateGroup={accountMode ? remoteGroups.createGroup : store.createGroup} onJoinGroup={accountMode ? remoteGroups.joinGroup : store.joinGroup} onUpdateGroup={accountMode ? remoteGroups.updateGroup : store.updateGroup} />,
   }
 
@@ -279,5 +293,6 @@ export default function App() {
 
   return <AppShell page={activePage} user={currentUser} group={group} groups={groups} dark={dark} onTheme={() => setTheme(dark ? 'light' : 'dark')} onSelectGroup={selectGroup} onNavigate={navigate}>
     {activePage && accountMode && remoteStats.loading ? <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando stats...</div> : <>{accountMode && remoteStats.error && activePage !== 'profile' && <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-500">{remoteStats.error}</div>}<Suspense fallback={<PageLoading />}>{routedContent}</Suspense></>}
+    {activeTour && <ProductTour tourId={activeTour} activePage={activePage} onNavigate={navigate} onClose={closeTour} />}
   </AppShell>
 }
