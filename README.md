@@ -130,16 +130,16 @@ Los patches `009_add_stat_entry_context.sql`, `010_expand_stat_football_formats.
 
 ## Mi historial
 
-Toda cuenta autenticada conserva un scope interno `personal:{userId}`. No crea una fila en `groups` ni requiere membresía, pero ya no aparece como si fuera un grupo en el selector principal.
+Toda cuenta autenticada conserva un scope virtual `personal:{userId}` llamado `Personal (sin grupo)`. No crea una fila en `groups`, no requiere membresía y aparece en el selector principal junto con `TODOS` y los grupos reales.
 
 - La carga rápida ofrece `Personal (sin grupo)` como contexto explícito.
 - En modo cuenta esas stats se guardan en Supabase con `scope_type = personal`.
 - El historial completo vive en `/perfil`, independientemente de la vista elegida en el header.
-- El selector principal muestra `TODOS` y luego únicamente grupos reales.
+- El selector principal muestra `TODOS`, `Personal (sin grupo)` y luego los grupos reales.
 
 ## Scope TODOS
 
-`TODOS` es un scope virtual de sólo lectura que aparece primero en el selector. Combina stats y miembros de todos los grupos reales donde la cuenta es miembro, deduplica usuarios en rankings y etiqueta cada movimiento con su grupo de origen. No existe en Supabase y no permite administrar, editar ni invitar miembros.
+`TODOS` es un scope virtual de sólo lectura que aparece primero en el selector. En Home combina las cargas personales y las cargas de todos los grupos reales del usuario; en Partidos muestra todos los partidos donde participa. Deduplica por ID y no permite administrar, editar ni invitar miembros.
 
 `Mi historial` ya no se presenta como grupo. La capacidad personal sigue existiendo como destino de carga y sus datos no se borran.
 
@@ -152,7 +152,7 @@ Toda cuenta autenticada conserva un scope interno `personal:{userId}`. No crea u
 
 ## Historial en Perfil
 
-`/perfil` muestra exclusivamente las cargas del usuario autenticado, sin depender del scope activo. Usa paginación server-side de 20 filas mediante Supabase. Los filtros por tipo y formato se combinan, y las cargas vinculadas muestran el partido y su grupo o `Sin grupo`. La tarjeta compartible se genera como PNG en el navegador y no se persiste.
+`/perfil` muestra exclusivamente las cargas del usuario autenticado, sin depender del scope activo. Usa paginación server-side de 20 filas mediante Supabase. La tarjeta visible y la compartible son globales: totalizan todos los contextos y muestran récord de racha y Mundiales ganados.
 
 ## Probar el flujo
 

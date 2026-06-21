@@ -8,7 +8,7 @@ export function createAllScope(userId: string): Group {
 }
 
 export function createPersonalScope(userId: string): Group {
-  return { id: `${PERSONAL_PREFIX}${userId}`, name: 'Mi historial', code: 'PERSONAL', memberCount: 1, gamesCount: 0, emoji: '👤', spicyMode: true, seeded: false }
+  return { id: `${PERSONAL_PREFIX}${userId}`, name: 'Personal (sin grupo)', code: 'PERSONAL', memberCount: 1, gamesCount: 0, emoji: '👤', spicyMode: true, seeded: false }
 }
 
 export function isPersonalScope(group: Pick<Group, 'id'>): boolean {

@@ -15,17 +15,15 @@ interface Props {
   matches: Match[]
   matchEvents: MatchEvent[]
   totals: UserTotals
-  seasonTotals: UserTotals
   rankings: RankingPlayer[]
   worldCup: PersonalWorldCupState
-  seasonWorldCup: PersonalWorldCupState
   onNavigate: (page: Page) => void
   userNames?: Record<string, string>
   groupNames?: Record<string, string>
   playerGroupIds?: Record<string, string[]>
 }
 
-export function HomePage({ user, group, entries, matches, matchEvents, totals, seasonTotals, rankings, worldCup, seasonWorldCup, onNavigate, userNames = {}, groupNames = {}, playerGroupIds = {} }: Props) {
+export function HomePage({ user, group, entries, matches, matchEvents, totals, rankings, worldCup, onNavigate, userNames = {}, groupNames = {}, playerGroupIds = {} }: Props) {
   const personalScope = isPersonalScope(group)
   const allScope = isAllScope(group)
   const feed = allScope ? buildAllGroupsActivityFeed(entries, userNames, groupNames, matches) : buildActivityFeed(entries, user, group, matches, matchEvents)
@@ -57,13 +55,13 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, s
     <GroupTicker key={group.id} messages={tickerMessages} />
 
     <section className="mt-6">
-      <div className="mb-3 flex items-center justify-between"><h2 className="font-extrabold">Mi temporada</h2><span className="text-xs text-slate-400">{seasonTotals.matches} partidos</span></div>
+      <div className="mb-3 flex items-center justify-between"><h2 className="font-extrabold">Mi temporada</h2><span className="text-xs text-slate-400">{totals.matches} partidos</span></div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          { label: 'Mis goles', value: String(seasonTotals.goals), detail: 'Temporada personal', icon: '⚽', color: 'text-emerald-500' },
-          { label: 'Mis asistencias', value: String(seasonTotals.assists), detail: 'Temporada personal', icon: '→', color: 'text-sky-500' },
-          { label: 'Mi racha', value: String(seasonTotals.scoringStreak), detail: 'partidos', icon: '↗', color: 'text-orange-500' },
-          { label: 'Mundial personal', value: worldCupStageLabels[seasonWorldCup.currentStage], detail: seasonWorldCup.worldCupsWon ? `${seasonWorldCup.worldCupsWon} ganado${seasonWorldCup.worldCupsWon === 1 ? '' : 's'}` : `Ciclo ${seasonWorldCup.currentCycle}`, icon: '◇', color: 'text-violet-500' },
+          { label: 'Mis goles', value: String(totals.goals), detail: group.name, icon: '⚽', color: 'text-emerald-500' },
+          { label: 'Mis asistencias', value: String(totals.assists), detail: group.name, icon: '→', color: 'text-sky-500' },
+          { label: 'Mi racha', value: String(totals.scoringStreak), detail: 'partidos', icon: '↗', color: 'text-orange-500' },
+          { label: 'Mundial personal', value: worldCupStageLabels[worldCup.currentStage], detail: worldCup.worldCupsWon ? `${worldCup.worldCupsWon} ganado${worldCup.worldCupsWon === 1 ? '' : 's'}` : `Ciclo ${worldCup.currentCycle}`, icon: '◇', color: 'text-violet-500' },
         ].map(item => <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-500/30 dark:border-white/10 dark:bg-white/[0.04]">
           <div className={`mb-5 text-xl font-black ${item.color}`}>{item.icon}</div><div className="truncate text-2xl font-black tracking-tight">{item.value}</div><div className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">{item.label}</div><div className="mt-2 text-[11px] text-slate-400">{item.detail}</div>
         </div>)}

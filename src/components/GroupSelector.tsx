@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Group } from '../types'
 import { CheckIcon, ChevronRight, UsersIcon } from './icons'
-import { isAllScope } from '../utils/scopes'
+import { isAllScope, isPersonalScope } from '../utils/scopes'
 
 interface Props {
   activeGroup: Group | null
@@ -33,9 +33,10 @@ export function GroupSelector({ activeGroup, groups, onSelect }: Props) {
       {groups.map(group => {
         const active = group.id === activeGroup?.id
         const all = isAllScope(group)
+        const personal = isPersonalScope(group)
         return <button role="option" aria-selected={active} key={group.id} onClick={() => { onSelect(group); setOpen(false) }} className={`flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition ${active ? 'bg-emerald-500/10' : 'hover:bg-slate-100 dark:hover:bg-white/5'}`}>
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-lg dark:bg-white/10">{group.emoji || '⚽'}</span>
-          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{group.name}</span><span className="mt-0.5 block text-[10px] text-slate-400">{all ? 'Vista combinada de todos tus grupos' : `${group.memberCount} jugadores`}</span></span>
+          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{group.name}</span><span className="mt-0.5 block text-[10px] text-slate-400">{all ? 'Grupos + Personal sin grupo' : personal ? 'Sólo tus cargas y partidos sin grupo' : `${group.memberCount} jugadores`}</span></span>
           {active && <CheckIcon className="h-4 w-4 text-emerald-500" />}
         </button>
       })}

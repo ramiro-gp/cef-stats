@@ -6,7 +6,7 @@ Fulbo Stats es un prototipo React + Vite + TypeScript + Tailwind, mobile first, 
 
 Incluye perfil y handle editables, avatar y tarjeta compartible, grupos con emoji, carga rápida con contexto, rankings e historial filtrables, feed, banner, Mundial Personal, partidos con o sin grupo, participantes externos, equipos, cupos, invitados, vinculación por código/link, score, votos MVP, comentarios cortos, stats de invitados y cancha visual.
 
-Las cuentas autenticadas conservan un scope personal interno `personal:{userId}` para cargas sin grupo. El historial vive en Perfil; el selector principal muestra `TODOS` y grupos reales.
+Las cuentas autenticadas conservan `Personal (sin grupo)` como scope virtual visible. El selector principal muestra `TODOS`, Personal y grupos reales; Perfil mantiene una tarjeta global independiente del scope.
 
 ## Estado de producción / staging
 
@@ -65,8 +65,8 @@ Supabase Auth/API                ↓
 - Stats y partidos autenticados se leen y escriben en Supabase; feed/banner siguen como proyecciones frontend.
 - Un usuario puede participar de un partido por código sin pertenecer al grupo anfitrión. Esa participación no crea una fila en `group_members` ni habilita acceso a otros partidos del grupo.
 - Abrir una invitación crea la participación aun sin equipo. `team` queda nulo hasta elegir claro u oscuro y esa fila ya habilita detalle, comentarios y voto MVP.
-- El scope personal usa su propio ID interno y se elige sólo como contexto de carga; no se administra ni aparece como grupo.
-- `TODOS` usa el scope virtual `all:{userId}` y agrega únicamente grupos donde la cuenta es miembro. No habilita administración ni membresías nuevas.
+- El scope personal usa su propio ID interno, no se administra y filtra cargas/partidos sin grupo.
+- `TODOS` usa `all:{userId}` y combina Personal con los grupos donde la cuenta es miembro. No habilita administración ni membresías nuevas.
 - Perfil tiene un historial propio, independiente del selector, paginado desde Supabase de a 20 cargas y restringido al usuario autenticado.
 - Algunos componentes legacy de detalle de participante/invitado permanecen en el repo aunque el flujo actual usa popover. Pueden retirarse en una limpieza posterior con QA visual.
 

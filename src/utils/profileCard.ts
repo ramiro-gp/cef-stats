@@ -27,7 +27,7 @@ function loadImage(source: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = () => reject(new Error('No pudimos preparar el avatar.')); image.src = source })
 }
 
-export async function createProfileCardPng(user: User, totals: UserTotals): Promise<Blob> {
+export async function createProfileCardPng(user: User, totals: UserTotals, badges: { scoringStreakRecord: number; worldCupsWon: number }): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = 1080; canvas.height = 1350
   const context = canvas.getContext('2d')
@@ -49,6 +49,13 @@ export async function createProfileCardPng(user: User, totals: UserTotals): Prom
     const fallbackAvatar = user.avatar?.startsWith('avatar:') ? user.initials : user.avatar || user.initials
     context.fillStyle = '#07110e'; context.font = '900 104px Inter, Arial, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(fallbackAvatar, 540, 370); context.textAlign = 'left'; context.textBaseline = 'alphabetic'
   }
+
+  const drawBadge = (text: string, y: number, color: string) => {
+    context.fillStyle = color; roundedRect(context, 640, y, 190, 64, 32)
+    context.fillStyle = '#ffffff'; context.font = '900 28px Inter, Arial, sans-serif'; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, 735, y + 32); context.textAlign = 'left'; context.textBaseline = 'alphabetic'
+  }
+  if (badges.scoringStreakRecord > 0) drawBadge(`🔥 ×${badges.scoringStreakRecord}`, 205, '#f97316')
+  if (badges.worldCupsWon > 0) drawBadge(`🏆 ×${badges.worldCupsWon}`, 470, '#8b5cf6')
 
   context.textAlign = 'center'; context.fillStyle = '#f8fafc'; context.font = '900 58px Inter, Arial, sans-serif'; context.fillText(user.name, 540, 610, 900)
   const handle = user.username.replace(/^@/, '').trim()

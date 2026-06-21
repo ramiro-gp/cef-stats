@@ -14,8 +14,8 @@ export function useSupabaseGroups(userId: string | null) {
   const [loadedUserId, setLoadedUserId] = useState<string | null>(null)
   const personalScope = useMemo(() => userId ? createPersonalScope(userId) : null, [userId])
   const allScope = useMemo(() => userId ? createAllScope(userId) : null, [userId])
-  const scopes = useMemo(() => [...(allScope ? [allScope] : []), ...groups], [allScope, groups])
-  const activeScope = useMemo(() => scopes.find(group => group.id === activeGroupId) ?? allScope ?? groups[0] ?? null, [activeGroupId, allScope, groups, scopes])
+  const scopes = useMemo(() => [...(allScope ? [allScope] : []), ...(personalScope ? [personalScope] : []), ...groups], [allScope, groups, personalScope])
+  const activeScope = useMemo(() => scopes.find(group => group.id === activeGroupId) ?? personalScope ?? allScope ?? groups[0] ?? null, [activeGroupId, allScope, groups, personalScope, scopes])
   const activeSharedGroup = useMemo(() => groups.find(group => group.id === activeScope?.id) ?? null, [activeScope?.id, groups])
 
   const selectGroup = useCallback((group: Group) => {
@@ -39,8 +39,9 @@ export function useSupabaseGroups(userId: string | null) {
       setAllMembers(await supabaseRepository.getMembersForGroups(loaded.map(group => group.id)))
       const persisted = supabaseRepository.getPersistedActiveGroupId()
       const allId = `all:${userId}`
-      const persistedIsValid = persisted === allId || Boolean(persisted && loaded.some(group => group.id === persisted))
-      const nextActiveId = persistedIsValid && persisted ? persisted : allId
+      const personalId = `personal:${userId}`
+      const persistedIsValid = persisted === allId || persisted === personalId || Boolean(persisted && loaded.some(group => group.id === persisted))
+      const nextActiveId = persistedIsValid && persisted ? persisted : personalId
       setActiveGroupId(nextActiveId)
       supabaseRepository.persistActiveGroupId(nextActiveId)
       return loaded

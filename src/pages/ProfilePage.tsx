@@ -25,6 +25,8 @@ interface Props {
   groups: Group[]
   totals: UserTotals
   worldCup: PersonalWorldCupState
+  globalScoringStreakRecord: number
+  globalWorldCupsWon: number
   theme: ThemeMode
   onSaveUser: (user: User) => void | string | Promise<void | string>
   onUpdateEntry: (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'>) => void | Promise<void>
@@ -46,7 +48,7 @@ interface Props {
   onHistoryPageChange?: (page: number) => void
 }
 
-export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
+export function ProfilePage({ user, group, entries, allEntries, matches, groups, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onTheme, onLogout, onOpenMatch, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedEntry, setSelectedEntry] = useState<StatEntry | null>(null)
@@ -92,10 +94,10 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
       <div className="space-y-4">
         <section className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-6 text-white">
           <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-emerald-500/20 blur-3xl" />
-          <div className="relative flex items-center gap-4"><UserAvatar value={user.avatar} fallback={user.initials} className="h-20 w-20 rounded-3xl text-2xl" /><div className="min-w-0"><div className="truncate text-xl font-black">{user.name}</div><div className="mt-1 text-sm font-semibold text-emerald-400">{user.position || 'Sin posición'}</div><div className="mt-0.5 text-sm text-slate-400">@{user.username.replace(/^@/, '')}</div>{totals.scoringStreak > 0 && <span className="mt-2 inline-block rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400">En racha</span>}</div></div>
+          <div className="relative flex items-center gap-4"><div className="relative shrink-0"><UserAvatar value={user.avatar} fallback={user.initials} className="h-20 w-20 rounded-3xl text-2xl" />{globalScoringStreakRecord > 0 && <span className="absolute -right-2 -top-2 rounded-full border border-orange-300/30 bg-orange-500 px-2 py-1 text-[10px] font-black text-white shadow-lg">🔥 ×{globalScoringStreakRecord}</span>}{globalWorldCupsWon > 0 && <span className="absolute -bottom-2 -right-2 rounded-full border border-violet-300/30 bg-violet-500 px-2 py-1 text-[10px] font-black text-white shadow-lg">🏆 ×{globalWorldCupsWon}</span>}</div><div className="min-w-0"><div className="truncate text-xl font-black">{user.name}</div><div className="mt-1 text-sm font-semibold text-emerald-400">{user.position || 'Sin posición'}</div><div className="mt-0.5 text-sm text-slate-400">@{user.username.replace(/^@/, '')}</div></div></div>
           <div className="relative mt-6 grid grid-cols-3 divide-x divide-white/10 text-center"><div><div className="text-xl font-black">{totals.goals}</div><div className="text-[10px] text-slate-500">Goles</div></div><div><div className="text-xl font-black">{totals.assists}</div><div className="text-[10px] text-slate-500">Asist.</div></div><div><div className="text-xl font-black">{totals.matches}</div><div className="text-[10px] text-slate-500">Partidos</div></div></div>
           <button onClick={() => setEditingProfile(true)} className="relative mt-5 min-h-11 w-full rounded-xl border border-white/10 bg-white/5 text-sm font-bold hover:bg-white/10">Editar perfil</button>
-          <div className="relative"><ShareProfileCardButton user={user} totals={totals} /></div>
+          <div className="relative"><ShareProfileCardButton user={user} totals={totals} scoringStreakRecord={globalScoringStreakRecord} worldCupsWon={globalWorldCupsWon} /></div>
         </section>
         <section className="rounded-2xl border border-violet-500/20 bg-violet-500/[0.07] p-5">
           <div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-xl bg-violet-500/15 text-violet-500"><TrophyIcon /></div><div><p className="text-[10px] font-bold uppercase tracking-widest text-violet-500">Mundial personal · Ciclo {worldCup.currentCycle}</p><h3 className="font-extrabold">{worldCupStageLabels[worldCup.currentStage]}</h3></div></div>
@@ -105,7 +107,7 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
         </section>
       </div>
       <div>
-        <div className="mb-5 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><FireIcon className="h-5 w-5 text-orange-500"/><div className="mt-4 text-2xl font-black">{totals.scoringStreak}</div><div className="text-xs text-slate-400">Racha goleadora</div></div><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><TrophyIcon className="h-5 w-5 text-emerald-500"/><div className="mt-4 text-2xl font-black">{totals.winRate}%</div><div className="text-xs text-slate-400">Partidos ganados</div></div></div>
+        <div className="mb-5 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><FireIcon className="h-5 w-5 text-orange-500"/><div className="mt-4 text-2xl font-black">{globalScoringStreakRecord}</div><div className="text-xs text-slate-400">Récord goleador</div></div><div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><TrophyIcon className="h-5 w-5 text-emerald-500"/><div className="mt-4 text-2xl font-black">{totals.winRate}%</div><div className="text-xs text-slate-400">Partidos ganados</div></div></div>
         <div className="mb-3 flex items-center justify-between"><div><h2 className="font-extrabold">Mi historial de cargas</h2><p className="mt-0.5 text-xs text-slate-400">Sólo tus números, en todos los scopes disponibles.</p></div><span className="text-xs text-slate-400">{totalHistoryEntries} {accountMode ? 'en Supabase' : 'locales'}</span></div>
         <section className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]"><StatFilterControls filters={activeHistoryFilters} onChange={changeHistoryFilters} /></section>
         {(historyError || statsError) && <div className="mb-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{historyError || statsError}</div>}

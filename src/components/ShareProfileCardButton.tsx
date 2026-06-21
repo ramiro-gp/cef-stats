@@ -16,14 +16,14 @@ function download(blob: Blob, filename: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
-export function ShareProfileCardButton({ user, totals }: { user: User; totals: UserTotals }) {
+export function ShareProfileCardButton({ user, totals, scoringStreakRecord, worldCupsWon }: { user: User; totals: UserTotals; scoringStreakRecord: number; worldCupsWon: number }) {
   const [status, setStatus] = useState<'idle' | 'generating' | 'done'>('idle')
   const [error, setError] = useState('')
   const createAndShare = async () => {
     if (status === 'generating') return
     setStatus('generating'); setError('')
     try {
-      const blob = await createProfileCardPng(user, totals)
+      const blob = await createProfileCardPng(user, totals, { scoringStreakRecord, worldCupsWon })
       const handle = user.username.replace(/^@/, '').trim()
       const safeHandle = handle.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '') || 'jugador'
       const filename = `${APP_SLUG}-${safeHandle}.png`

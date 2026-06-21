@@ -34,6 +34,16 @@ export function calculateUserTotals(entries: StatEntry[], includeSeedData = true
   }
 }
 
+export function calculateScoringStreakRecord(entries: StatEntry[]): number {
+  let current = 0
+  let record = 0
+  for (const entry of [...entries].sort((a, b) => (a.playedAt ?? a.createdAt).localeCompare(b.playedAt ?? b.createdAt) || a.id.localeCompare(b.id))) {
+    current = entry.goals > 0 ? current + 1 : 0
+    record = Math.max(record, current)
+  }
+  return record
+}
+
 export function buildRankings(entries: StatEntry[], user: User, includeSeedData = true): RankingPlayer[] {
   if (!includeSeedData && entries.length === 0) return []
   const totals = calculateUserTotals(entries, includeSeedData)
