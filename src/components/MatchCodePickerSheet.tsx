@@ -5,7 +5,7 @@ import { useMatchCodeLookup } from '../hooks/useMatchCodeLookup'
 import { getMatchResultForTeam, getMaxTeamSize, isTeamFull } from '../utils/matches'
 import { ModalSheet } from './ModalSheet'
 
-export interface MatchLinkSelection { match: Match; team: MatchTeam; automaticResult: MatchResult | null }
+export interface MatchLinkSelection { match: Match; team?: MatchTeam; automaticResult: MatchResult | null }
 
 export function MatchCodePickerSheet({ matches, groups, entries, userId, onSelect, onClose }: { matches: Match[]; groups: Group[]; entries: StatEntry[]; userId: string; onSelect: (selection: MatchLinkSelection) => void; onClose: () => void }) {
   const { query, setQuery, match, status } = useMatchCodeLookup(matches)

@@ -93,6 +93,15 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     return joined
   }), [matches, mutate, upsert])
 
+  const attendMatch = useCallback((matchId: string) => mutate(async () => {
+    const attended = upsert(await supabaseMatchRepository.attendMatch(matchId))
+    const loadedEntries = await supabaseRepository.listMatchStatEntries([attended.id])
+    setEntries(current => [...current.filter(entry => entry.matchId !== attended.id), ...loadedEntries])
+    return attended
+  }), [mutate, upsert])
+
+  const omitMatch = useCallback((matchId: string) => mutate(async () => upsert(await supabaseMatchRepository.omitMatch(matchId))), [mutate, upsert])
+
   const setParticipantTeam = useCallback((matchId: string, participantId: string, team: MatchTeam) => mutate(async () => upsert(await supabaseMatchRepository.setParticipantTeam(matchId, participantId, team))), [mutate, upsert])
 
   const leaveMatch = useCallback((matchId: string) => mutate(async () => {
@@ -155,5 +164,5 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     return saved
   }), [entries, matches, mutate, userId])
 
-  return { matches, entries, loading, saving, error, createMatch, lookupMatch, joinTeam, setParticipantTeam, leaveMatch, saveScore, setMvp, saveComment, deleteComment, addGuest, updateGuest, removeGuest, saveGuestStats, saveStats, reload: load }
+  return { matches, entries, loading, saving, error, createMatch, lookupMatch, joinTeam, attendMatch, omitMatch, setParticipantTeam, leaveMatch, saveScore, setMvp, saveComment, deleteComment, addGuest, updateGuest, removeGuest, saveGuestStats, saveStats, reload: load }
 }

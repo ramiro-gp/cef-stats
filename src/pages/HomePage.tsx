@@ -35,7 +35,7 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
   const goalsToNext = playerAhead ? playerAhead.goals - totals.goals + 1 : 0
   const tickerMessages = buildGroupBannerMessages(group, rankings, user, totals, worldCup, entries.length, matches, entries, playerGroupIds)
   const featuredMatch = !allScope && !personalScope
-    ? [...matches].filter(match => match.status === 'open').sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0]
+    ? [...matches].filter(match => match.status === 'open' && !match.omittedByCurrentUser).sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0]
     : undefined
 
   return <>
@@ -49,7 +49,7 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
         </div>
         <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           <button onClick={() => onNavigate('add')} className="flex min-h-16 w-full items-center justify-between rounded-2xl bg-emerald-500 px-5 font-extrabold text-ink shadow-glow transition hover:bg-emerald-400 active:scale-[.99] sm:w-auto sm:min-w-72">
-            <span className="flex items-center gap-3"><PlusCircleIcon /> Cargar mis números</span><ChevronRight />
+            <span className="flex items-center gap-3"><PlusCircleIcon /> Cargar stats</span><ChevronRight />
           </button>
           <button onClick={() => onNavigate('matches')} className="min-h-12 w-full rounded-xl border border-white/10 text-sm font-bold text-slate-300 transition hover:bg-white/5 sm:w-auto sm:px-5">+ Partido</button>
         </div>

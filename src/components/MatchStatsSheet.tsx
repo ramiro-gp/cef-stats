@@ -34,7 +34,7 @@ export function MatchStatsSheet({ match, userId, existing, onSave, onClose }: { 
     }
   }
 
-  return <ModalSheet title={existing ? 'Editar mis números' : 'Cargar mis números'} onClose={onClose}>
+  return <ModalSheet title={existing ? 'Editar stats' : 'Cargar stats'} onClose={onClose}>
     {automaticResult ? <div className="rounded-2xl bg-emerald-500/10 p-4 text-sm"><span className="font-bold text-emerald-500">Resultado calculado:</span> {automaticResult === 'win' ? 'Ganaste' : automaticResult === 'draw' ? 'Empataste' : 'Perdiste'} según tu equipo.</div> : <div className="grid grid-cols-3 gap-2.5">{options.map(option => <button key={option.value} onClick={() => setResult(option.value)} className={`min-h-24 rounded-2xl border p-3 ${result === option.value ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500' : 'border-slate-200 dark:border-white/10'}`}><span className="block text-2xl">{option.emoji}</span><span className="mt-2 block text-sm font-bold">{option.label}</span></button>)}</div>}
     <div className="mt-4 space-y-3"><Counter label="Goles" value={goals} onChange={setGoals} /><Counter label="Asistencias" value={assists} onChange={setAssists} /></div>
     {error && <p className="mt-3 text-sm font-bold text-rose-500">{error}</p>}

@@ -153,6 +153,7 @@ export interface Match {
   mvpVotes?: MatchMvpVote[]
   comments?: MatchComment[]
   guestStats: GuestMatchStats[]
+  omittedByCurrentUser?: boolean
   createdAt: string
   updatedAt: string
 }

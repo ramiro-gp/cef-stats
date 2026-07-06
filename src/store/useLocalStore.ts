@@ -134,6 +134,19 @@ export function useLocalStore() {
     })
   }, [])
 
+  const attendMatch = useCallback((matchId: string) => {
+    const createdAt = new Date().toISOString()
+    setState(current => ({ ...current, matches: current.matches.map(match => {
+      if (match.id !== matchId) return match
+      if (match.participants.some(participant => participant.userId === current.user.id)) return { ...match, omittedByCurrentUser: false }
+      return { ...match, omittedByCurrentUser: false, participants: [...match.participants, { id: createId('participant'), matchId, userId: current.user.id, type: 'registered_user', createdAt }], updatedAt: createdAt }
+    }) }))
+  }, [])
+
+  const omitMatch = useCallback((matchId: string) => {
+    setState(current => ({ ...current, matches: current.matches.map(match => match.id === matchId ? { ...match, omittedByCurrentUser: true } : match) }))
+  }, [])
+
   const setParticipantTeam = useCallback((matchId: string, participantId: string, team: MatchTeam) => {
     const updatedAt = new Date().toISOString()
     setState(current => ({ ...current, matches: current.matches.map(match => match.id === matchId ? { ...match, participants: match.participants.map(participant => participant.id === participantId ? { ...participant, team } : participant), updatedAt } : match), entries: current.entries.map(entry => entry.matchId === matchId && current.matches.find(match => match.id === matchId)?.participants.find(participant => participant.id === participantId)?.userId === entry.userId ? { ...entry, team } : entry) }))
@@ -255,7 +268,7 @@ export function useLocalStore() {
     return true
   }, [state.entries, state.matches])
 
-  return useMemo(() => ({ ...state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, setParticipantTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch }), [state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, setParticipantTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch])
+  return useMemo(() => ({ ...state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, attendMatch, omitMatch, setParticipantTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch }), [state, group, addEntry, updateEntry, deleteEntry, setUser, setGroup, createGroup, joinGroup, updateGroup, createMatch, joinMatchTeam, attendMatch, omitMatch, setParticipantTeam, leaveMatch, saveMatchScore, setMatchMvp, saveMatchEntry, addGuest, updateGuest, removeGuest, saveGuestStats, linkEntryToMatch])
 }
 
 export type AddStatEntry = (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>) => StatEntry | Promise<StatEntry>

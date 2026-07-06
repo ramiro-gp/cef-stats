@@ -4,6 +4,7 @@ import { PageTitle } from '../components/PageTitle'
 import { MatchCodePickerSheet, type MatchLinkSelection } from '../components/MatchCodePickerSheet'
 import type { Group, Match, MatchResult, Page, PlayerPosition, StatEntry, StatFootballFormat, StatMatchType, User } from '../types'
 import type { AddStatEntry } from '../store/useLocalStore'
+import { getMatchResultForTeam } from '../utils/matches'
 
 const resultOptions: { value: MatchResult; label: string; emoji: string }[] = [
   { value: 'win', label: 'Gané', emoji: '🙌' },
@@ -55,6 +56,18 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
   const contextName = personalContextId && contextId === personalContextId ? 'Personal' : groups.find(group => group.id === contextId)?.name
   const positionRelevant = matchType === 'tournament' || footballFormat === 'F8' || footballFormat === 'F11'
   const matchTypeLabel = matchType === 'tournament' ? 'Torneo' : 'Amistoso'
+  const pendingMatches = matches
+    .filter(match => !match.omittedByCurrentUser && !entries.some(entry => entry.userId === user.id && entry.matchId === match.id))
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+  const selectMatchShortcut = (match: Match) => {
+    const participant = match.participants.find(item => item.userId === user.id)
+    const team = participant?.team
+    const automaticResult = team ? getMatchResultForTeam(match.score, team) : null
+    setLinked({ match, team, automaticResult })
+    setContextId(match.groupId || personalContextId)
+    if (automaticResult) setResult(automaticResult)
+    if (formatOptions.includes(match.format as StatFootballFormat)) setFootballFormat(match.format as StatFootballFormat)
+  }
 
   const save = async () => {
     if (!result || !contextId || saved || saving) return
@@ -84,6 +97,17 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
         <p className="mt-1 text-[11px] leading-5 text-slate-400">Si no aparece ningún grupo, <button type="button" onClick={() => onNavigate('groups')} className="font-bold text-emerald-500 underline underline-offset-2">creá o unite a uno</button>.</p>
       </section>
 
+      {pendingMatches.length > 0 && <section className="rounded-2xl border border-emerald-500/20 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]">
+        <div className="mb-3"><h2 className="text-sm font-extrabold">Partidos pendientes de cargar</h2><p className="mt-1 text-xs leading-5 text-slate-400">Elegí uno y tus números quedan vinculados automáticamente. Los omitidos no aparecen acá.</p></div>
+        <div className="space-y-2">{pendingMatches.slice(0, 5).map(match => {
+          const participant = match.participants.find(item => item.userId === user.id)
+          const teamName = participant?.team ? participant.team === 'light' ? match.lightTeamName : match.darkTeamName : participant ? 'Sin equipo todavía' : 'Todavía no decidiste'
+          return <button key={match.id} type="button" onClick={() => selectMatchShortcut(match)} className={`w-full rounded-2xl border p-3 text-left transition ${linked?.match.id === match.id ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-emerald-500/40 dark:border-white/10'}`}>
+            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black">{match.title}</p><p className="mt-1 text-xs text-slate-400">{new Date(match.scheduledAt).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {match.groupId ? match.groupName ?? groups.find(group => group.id === match.groupId)?.name ?? 'Grupo' : 'Sin grupo'}</p></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{teamName}</span></div>
+          </button>
+        })}</div>
+      </section>}
+
       <section data-tour="add-result">
         <div className="mb-3 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-xs font-black text-ink">1</span><h2 className="text-sm font-bold">Resultado <span className="text-emerald-500">*</span></h2></div>
         <div className="grid grid-cols-3 gap-2.5">{resultOptions.map(option => <button type="button" key={option.value} disabled={Boolean(linked?.automaticResult)} onClick={() => setResult(option.value)} className={`relative min-h-24 rounded-2xl border p-3 text-center transition active:scale-[.97] disabled:cursor-default ${result === option.value ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500' : 'border-slate-200 bg-white hover:border-emerald-500/40 dark:border-white/10 dark:bg-white/[0.04]'}`}>{result === option.value && <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-ink"><CheckIcon className="h-3.5 w-3.5 stroke-[3]" /></span>}<span className="block text-2xl">{option.emoji}</span><span className="mt-2 block text-sm font-bold">{option.label}</span></button>)}</div>
@@ -103,7 +127,7 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
         </div>}
       </section>
 
-      <section className="rounded-2xl border border-dashed border-slate-300 p-4 dark:border-white/15">{linked ? <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-emerald-500">Partido vinculado</p><p className="mt-1 font-bold">{linked.match.title} · {linked.team === 'light' ? linked.match.lightTeamName : linked.match.darkTeamName}</p>{linked.automaticResult && <p className="mt-1 text-xs text-slate-400">Resultado calculado automáticamente.</p>}</div><button onClick={() => setLinked(null)} className="min-h-10 rounded-xl px-3 text-xs font-bold text-rose-500">Quitar</button></div> : <><button onClick={() => setLinking(true)} className="min-h-11 w-full text-sm font-bold text-emerald-500">Vincular a partido con código</button><p className="mt-1 text-center text-[11px] leading-5 text-slate-400">¿Todavía no se creó el partido? Podés vincularlo después desde tu perfil.</p></>}</section>
+      <section className="rounded-2xl border border-dashed border-slate-300 p-4 dark:border-white/15">{linked ? <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wider text-emerald-500">Partido vinculado</p><p className="mt-1 font-bold">{linked.match.title} · {linked.team ? linked.team === 'light' ? linked.match.lightTeamName : linked.match.darkTeamName : 'sin equipo todavía'}</p>{linked.automaticResult && <p className="mt-1 text-xs text-slate-400">Resultado calculado automáticamente.</p>}</div><button onClick={() => setLinked(null)} className="min-h-10 rounded-xl px-3 text-xs font-bold text-rose-500">Quitar</button></div> : <><button onClick={() => setLinking(true)} className="min-h-11 w-full text-sm font-bold text-emerald-500">Vincular a partido con código</button><p className="mt-1 text-center text-[11px] leading-5 text-slate-400">¿Todavía no se creó el partido? Podés vincularlo después desde tu perfil.</p></>}</section>
 
       <div className="rounded-2xl bg-slate-100 p-4 text-xs text-slate-500 dark:bg-white/[0.04] dark:text-slate-400"><FireIcon className="mr-2 inline h-4 w-4 text-orange-500" />Guardá tus números y actualizamos tu racha.</div>
       {error && <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{error}</div>}

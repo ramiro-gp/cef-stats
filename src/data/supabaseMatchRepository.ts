@@ -72,6 +72,10 @@ interface MatchGroupLabelRow {
   group_name: string
 }
 
+interface MatchOmissionRow {
+  match_id: string
+}
+
 const matchColumns = 'id,host_group_id,title,light_team_name,dark_team_name,format,invite_code,scheduled_at,created_by,status,light_score,dark_score,mvp_user_id,mvp_guest_id,created_at,updated_at'
 
 function client() {
@@ -85,6 +89,7 @@ function matchError(message: string): string {
   if (normalized.includes('match_mvp_votes') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/005_add_match_mvp_votes.sql.'
   if ((normalized.includes('list_my_matches') || normalized.includes('get_match_group_labels')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/007_allow_external_match_participants.sql.'
   if (normalized.includes('attend_match_by_invite') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/008_allow_match_participants_without_team.sql.'
+  if ((normalized.includes('match_omissions') || normalized.includes('omit_match') || normalized.includes('attend_match')) && (normalized.includes('does not exist') || normalized.includes('schema cache') || normalized.includes('could not find'))) return 'Falta ejecutar supabase/patches/018_match_omissions_and_attendance.sql.'
   if (normalized.includes('host_group_id') && normalized.includes('not-null')) return 'Falta ejecutar supabase/patches/012_allow_matches_without_group.sql.'
   if ((normalized.includes('light_team_name') || normalized.includes('set_match_participant_team')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/014_add_match_team_names_and_admin_team_assignment.sql.'
   if (normalized.includes('only match creator')) return 'Sólo quien creó el partido puede cambiar equipos ajenos.'
@@ -110,23 +115,26 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
   if (!rows.length) return []
   const db = client()
   const matchIds = rows.map(row => row.id)
-  const [participantsResult, guestsResult, votesResult, commentsResult, groupLabelsResult] = await Promise.all([
+  const [participantsResult, guestsResult, votesResult, commentsResult, groupLabelsResult, omissionsResult] = await Promise.all([
     db.from('match_participants').select('id,match_id,user_id,team,created_at').in('match_id', matchIds),
     db.from('match_guests').select('id,match_id,name,avatar,team,goals,assists,created_at,updated_at').in('match_id', matchIds),
     db.from('match_mvp_votes').select('id,match_id,voter_user_id,voted_user_id,voted_guest_id,created_at,updated_at').in('match_id', matchIds),
     db.from('match_comments').select('id,match_id,user_id,body,created_at,updated_at').in('match_id', matchIds),
     db.rpc('get_match_group_labels', { p_match_ids: matchIds }),
+    db.from('match_omissions').select('match_id').in('match_id', matchIds),
   ])
   if (participantsResult.error) throw new Error(matchError(participantsResult.error.message))
   if (guestsResult.error) throw new Error(matchError(guestsResult.error.message))
   if (votesResult.error) throw new Error(matchError(votesResult.error.message))
   if (commentsResult.error) throw new Error(matchError(commentsResult.error.message))
   if (groupLabelsResult.error) throw new Error(matchError(groupLabelsResult.error.message))
+  if (omissionsResult.error) throw new Error(matchError(omissionsResult.error.message))
   const participantRows = participantsResult.data as ParticipantRow[]
   const guestRows = guestsResult.data as GuestRow[]
   const voteRows = votesResult.data as MvpVoteRow[]
   const commentRows = commentsResult.data as CommentRow[]
   const groupLabels = new Map((groupLabelsResult.data as MatchGroupLabelRow[]).map(item => [item.match_id, item.group_name]))
+  const omittedMatchIds = new Set((omissionsResult.data as MatchOmissionRow[]).map(item => item.match_id))
   const userIds = [...new Set(participantRows.map(row => row.user_id))]
   const profiles = new Map<string, ProfileRow>()
   if (userIds.length) {
@@ -174,6 +182,7 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
       mvpVotes,
       comments,
       guestStats: matchGuests.map(item => ({ participantId: item.id, goals: item.goals, assists: item.assists, updatedAt: item.updated_at })),
+      omittedByCurrentUser: omittedMatchIds.has(row.id),
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     }
@@ -222,6 +231,18 @@ export const supabaseMatchRepository = {
     const result = await client().rpc('attend_match_by_invite', { p_invite_code: code })
     if (result.error) throw new Error(matchError(result.error.message))
     return result.data ? this.getMatch(result.data as string) : null
+  },
+
+  async attendMatch(matchId: string): Promise<Match> {
+    const result = await client().rpc('attend_match', { p_match_id: matchId })
+    if (result.error) throw new Error(matchError(result.error.message))
+    return this.getMatch(result.data as string)
+  },
+
+  async omitMatch(matchId: string): Promise<Match> {
+    const result = await client().rpc('omit_match', { p_match_id: matchId })
+    if (result.error) throw new Error(matchError(result.error.message))
+    return this.getMatch(result.data as string)
   },
 
   async createMatch(groupId: string | null, values: { title: string; scheduledAt: string; format?: MatchFormat; lightTeamName: string; darkTeamName: string }): Promise<Match> {
