@@ -28,6 +28,7 @@ import { PwaUpdatePrompt } from './components/PwaUpdatePrompt'
 import { usePwaInstall } from './hooks/usePwaInstall'
 import { ProductTour } from './components/ProductTour'
 import { hasSeenInitialTour, markInitialTourSeen, type ProductTourId } from './config/productTours'
+import type { UndoableActionOptions } from './utils/criticalActions'
 
 const AddStatsPage = lazy(() => import('./pages/AddStatsPage').then(module => ({ default: module.AddStatsPage })))
 const GroupsPage = lazy(() => import('./pages/GroupsPage').then(module => ({ default: module.GroupsPage })))
@@ -94,6 +95,31 @@ export default function App() {
   }
   const notify = useCallback((text: string, tone: ToastMessage['tone'] = 'success') => setToast({ id: Date.now(), text, tone }), [])
   const closeToast = useCallback(() => setToast(null), [])
+  const scheduleUndoableAction = useCallback((options: UndoableActionOptions) => {
+    const id = Date.now()
+    let undone = false
+    const timeout = window.setTimeout(() => {
+      if (undone) return
+      setToast(current => current?.id === id ? null : current)
+      void Promise.resolve(options.commit()).then(() => {
+        if (options.successText) notify(options.successText)
+      }).catch(reason => {
+        notify(reason instanceof Error ? reason.message : options.errorText ?? 'No pudimos completar la acción.', 'error')
+      })
+    }, 2000)
+    setToast({
+      id,
+      tone: 'success',
+      text: options.text,
+      durationMs: 2000,
+      actionLabel: 'DESHACER',
+      onAction: () => {
+        undone = true
+        window.clearTimeout(timeout)
+        setToast(null)
+      },
+    })
+  }, [notify])
 
   useEffect(() => {
     if (!accountMode || activeTour || hasSeenInitialTour(currentUser.id)) return
@@ -261,7 +287,7 @@ export default function App() {
     return true
   } : store.linkEntryToMatch
 
-  const updateProfileHistoryEntry = async (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { contextId: string }) => {
+  const updateProfileHistoryEntry = async (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { contextId: string; unlinkMatch?: boolean }) => {
     const entry = (accountMode ? profileHistory.seasonEntries : store.entries).find(item => item.id === id && item.userId === currentUser.id)
     if (!entry) throw new Error('No encontramos la carga que querés editar.')
     const personalContextId = accountMode ? remoteGroups.personalScope?.id : undefined
@@ -270,18 +296,26 @@ export default function App() {
     if (!targetGroup && !isPersonalTarget) throw new Error('Elegí un contexto válido para esta carga.')
     const linkedMatch = entry.matchId ? allMatches.find(match => match.id === entry.matchId) : undefined
     const targetGroupId = isPersonalTarget ? '' : targetGroup?.id ?? ''
-    if (entry.matchId && !linkedMatch) throw new Error('Esta carga está vinculada a un partido que no está disponible. No podés cambiar su contexto.')
-    if (linkedMatch && linkedMatch.groupId !== targetGroupId) throw new Error('Esta carga está vinculada a un partido. Para cambiarla a otro contexto, primero debe desvincularse del partido.')
+    if (entry.matchId && !linkedMatch && !values.unlinkMatch) throw new Error('Esta carga está vinculada a un partido que no está disponible. No podés cambiar su contexto.')
+    if (linkedMatch && linkedMatch.groupId !== targetGroupId && !values.unlinkMatch) throw new Error('Esta carga está vinculada a un partido. Para cambiarla a otro contexto, primero debe desvincularse del partido.')
     const statValues = { result: values.result, goals: values.goals, assists: values.assists }
-    if (!accountMode) return store.updateEntry(id, { ...statValues, groupId: targetGroupId })
-    await remoteStats.updateEntry(id, { ...statValues, scope: isPersonalTarget ? { type: 'personal', userId: currentUser.id } : { type: 'group', userId: currentUser.id, groupId: targetGroup!.id } })
+    const unlinkValues = values.unlinkMatch ? { matchId: null, team: null } : {}
+    if (!accountMode) return store.updateEntry(id, { ...statValues, ...unlinkValues, groupId: targetGroupId })
+    await remoteStats.updateEntry(id, { ...statValues, ...unlinkValues, scope: isPersonalTarget ? { type: 'personal', userId: currentUser.id } : { type: 'group', userId: currentUser.id, groupId: targetGroup!.id } })
     await profileHistory.reload()
   }
 
   const deleteProfileHistoryEntry = async (id: string) => {
-    if (!accountMode) return store.deleteEntry(id)
-    await remoteStats.deleteEntry(id)
-    await profileHistory.reload()
+    scheduleUndoableAction({
+      text: 'Carga por eliminar.',
+      successText: 'Carga eliminada.',
+      errorText: 'No pudimos eliminar la carga.',
+      commit: async () => {
+        if (!accountMode) { store.deleteEntry(id); return }
+        await remoteStats.deleteEntry(id)
+        await profileHistory.reload()
+      },
+    })
   }
 
   const saveQuickStats = async (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>, contextId: string): Promise<StatEntry> => {
@@ -310,12 +344,12 @@ export default function App() {
   }
 
   const pageContent = {
-    home: <HomePage user={currentUser} group={group} entries={homeEntries} matches={groupMatches} matchEvents={groupMatchEvents} totals={totals} rankings={rankings} worldCup={worldCup} onNavigate={navigate} userNames={userNames} groupNames={groupNames} playerGroupIds={playerGroupIds} />,
+    home: <HomePage user={currentUser} group={group} entries={homeEntries} matches={groupMatches} matchEvents={groupMatchEvents} totals={totals} rankings={rankings} worldCup={worldCup} onNavigate={navigate} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} userNames={userNames} groupNames={groupNames} playerGroupIds={playerGroupIds} />,
     add: <AddStatsPage key={group.id} onSave={saveQuickStats} onNavigate={navigate} onNotify={notify} matches={accountMode ? allMatches : groupMatches} groups={accountMode ? remoteGroups.groups : store.groups} entries={accountMode ? scopeEntries : store.entries} user={currentUser} defaultContextId={accountMode ? remoteGroups.activeSharedGroup?.id ?? (personalScope ? remoteGroups.personalScope?.id ?? '' : '') : group.id} personalContextId={accountMode ? remoteGroups.personalScope?.id : undefined} />,
-    matches: <MatchesPage group={group} user={currentUser} matches={matchRouteId ? allMatches : groupMatches} entries={accountMode ? remoteMatches.entries : groupEntries} initialMatchId={matchRouteId} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} creationGroups={accountMode ? remoteGroups.groups : []} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onCloseMatch={() => routerNavigate(pagePaths.matches, { replace: true })} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onParticipantTeam={accountMode ? remoteMatches.setParticipantTeam : store.setParticipantTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? async (matchId, values) => { const saved = await remoteMatches.saveStats(matchId, values); await Promise.all([profileHistory.reload(), remoteStats.reload()]); return saved } : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} />,
+    matches: <MatchesPage group={group} user={currentUser} matches={matchRouteId ? allMatches : groupMatches} entries={accountMode ? remoteMatches.entries : groupEntries} initialMatchId={matchRouteId} initialInviteCode={pendingMatchCode} remoteMode={accountMode} loading={accountMode && remoteMatches.loading} loadError={accountMode ? remoteMatches.error : ''} creationGroups={accountMode ? remoteGroups.groups : []} onLookupMatch={lookupMatch} onInviteConsumed={consumeMatchInvite} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onCloseMatch={() => routerNavigate(pagePaths.matches, { replace: true })} onCreate={accountMode ? remoteMatches.createMatch : values => store.createMatch(values, group.id)} onJoinTeam={accountMode ? remoteMatches.joinTeam : store.joinMatchTeam} onParticipantTeam={accountMode ? remoteMatches.setParticipantTeam : store.setParticipantTeam} onLeave={accountMode ? remoteMatches.leaveMatch : store.leaveMatch} onScore={accountMode ? remoteMatches.saveScore : store.saveMatchScore} onMvp={accountMode ? remoteMatches.setMvp : store.setMatchMvp} onSaveComment={accountMode ? remoteMatches.saveComment : undefined} onDeleteComment={accountMode ? remoteMatches.deleteComment : undefined} onSaveStats={accountMode ? async (matchId, values) => { const saved = await remoteMatches.saveStats(matchId, values); await Promise.all([profileHistory.reload(), remoteStats.reload()]); return saved } : store.saveMatchEntry} onAddGuest={accountMode ? remoteMatches.addGuest : store.addGuest} onUpdateGuest={accountMode ? remoteMatches.updateGuest : store.updateGuest} onRemoveGuest={accountMode ? remoteMatches.removeGuest : store.removeGuest} onSaveGuestStats={accountMode ? remoteMatches.saveGuestStats : store.saveGuestStats} onUndoableAction={scheduleUndoableAction} />,
     rankings: <RankingsPage group={group} players={rankings} sourceEntries={rankingEntries} sourceUsers={accountMode ? rankingUsers : [currentUser]} currentUserId={currentUser.id} />,
     profile: <ProfilePage user={currentUser} group={group} entries={groupEntries} allEntries={accountMode ? [...profileHistory.entries, ...remoteStats.entries] : store.entries} matches={accountMode ? allMatches : groupMatches} groups={accountMode ? remoteGroups.groups : groups} personalContextId={accountMode ? remoteGroups.personalScope?.id : undefined} totals={globalTotals} worldCup={worldCup} globalScoringStreakRecord={globalScoringStreakRecord} globalWorldCupsWon={globalWorldCup.worldCupsWon} theme={theme} onSaveUser={saveUser} onUpdateEntry={updateProfileHistoryEntry} onDeleteEntry={deleteProfileHistoryEntry} onLinkEntry={linkEntry} onNotify={notify} onTheme={setTheme} onLogout={logout} onOpenMatch={matchId => routerNavigate(`${pagePaths.matches}/${matchId}`)} onStartTour={setActiveTour} pwaCanInstall={pwaInstall.canInstall} pwaInstalled={pwaInstall.installed} onInstallPwa={pwaInstall.install} accountMode={accountMode} statsError={accountMode ? remoteStats.error : ''} historyEntries={accountMode ? profileHistory.entries : store.entries.filter(entry => entry.userId === currentUser.id)} historyTotal={accountMode ? profileHistory.total : undefined} historyPage={accountMode ? profileHistory.page : undefined} historyPageSize={profileHistory.pageSize} historyLoading={accountMode && profileHistory.loading} historyError={accountMode ? profileHistory.error : ''} historyFilters={accountMode ? profileHistory.filters : undefined} onHistoryFiltersChange={accountMode ? profileHistory.setFilters : undefined} onHistoryPageChange={accountMode ? profileHistory.setPage : undefined} />,
-    groups: <GroupsPage groups={accountMode ? remoteGroups.groups : groups} currentGroup={accountMode ? remoteGroups.activeSharedGroup : group} members={accountMode ? remoteGroups.members : localMembers} memberships={accountMode ? remoteGroups.allMembers : localMembers} currentUserId={accountMode ? auth.user!.id : currentUser.id} remoteMode={accountMode} loading={accountMode && remoteGroups.loading} membersLoading={accountMode && remoteGroups.membersLoading} loadError={accountMode ? groupInviteError || remoteGroups.error : ''} onSelectGroup={selectGroup} onCreateGroup={accountMode ? remoteGroups.createGroup : store.createGroup} onJoinGroup={accountMode ? remoteGroups.joinGroup : store.joinGroup} onUpdateGroup={accountMode ? remoteGroups.updateGroup : store.updateGroup} />,
+    groups: <GroupsPage groups={accountMode ? remoteGroups.groups : groups} currentGroup={accountMode ? remoteGroups.activeSharedGroup : group} members={accountMode ? remoteGroups.members : localMembers} memberships={accountMode ? remoteGroups.allMembers : localMembers} currentUserId={accountMode ? auth.user!.id : currentUser.id} remoteMode={accountMode} loading={accountMode && remoteGroups.loading} membersLoading={accountMode && remoteGroups.membersLoading} loadError={accountMode ? groupInviteError || remoteGroups.error : ''} onSelectGroup={selectGroup} onCreateGroup={accountMode ? remoteGroups.createGroup : store.createGroup} onJoinGroup={accountMode ? remoteGroups.joinGroup : store.joinGroup} onUpdateGroup={accountMode ? remoteGroups.updateGroup : store.updateGroup} onKickMember={accountMode ? remoteGroups.kickMember : undefined} onDeleteGroup={accountMode ? remoteGroups.deleteGroup : undefined} onUndoableAction={scheduleUndoableAction} />,
   }
 
   const routedContent = <Routes>

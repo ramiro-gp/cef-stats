@@ -18,12 +18,13 @@ interface Props {
   rankings: RankingPlayer[]
   worldCup: PersonalWorldCupState
   onNavigate: (page: Page) => void
+  onOpenMatch?: (matchId: string) => void
   userNames?: Record<string, string>
   groupNames?: Record<string, string>
   playerGroupIds?: Record<string, string[]>
 }
 
-export function HomePage({ user, group, entries, matches, matchEvents, totals, rankings, worldCup, onNavigate, userNames = {}, groupNames = {}, playerGroupIds = {} }: Props) {
+export function HomePage({ user, group, entries, matches, matchEvents, totals, rankings, worldCup, onNavigate, onOpenMatch, userNames = {}, groupNames = {}, playerGroupIds = {} }: Props) {
   const personalScope = isPersonalScope(group)
   const allScope = isAllScope(group)
   const feed = allScope ? buildAllGroupsActivityFeed(entries, userNames, groupNames, matches) : buildActivityFeed(entries, user, group, matches, matchEvents)
@@ -33,6 +34,9 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
   const playerAhead = [...rankings].sort((a, b) => b.goals - a.goals)[goalPosition - 2]
   const goalsToNext = playerAhead ? playerAhead.goals - totals.goals + 1 : 0
   const tickerMessages = buildGroupBannerMessages(group, rankings, user, totals, worldCup, entries.length, matches, entries, playerGroupIds)
+  const featuredMatch = !allScope && !personalScope
+    ? [...matches].filter(match => match.status === 'open').sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0]
+    : undefined
 
   return <>
     <section data-tour="home-hero" className="relative overflow-hidden rounded-[28px] bg-[#0c2019] p-5 text-white shadow-xl dark:border dark:border-white/5 sm:p-7">
@@ -53,6 +57,17 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
     </section>
 
     <GroupTicker key={group.id} messages={tickerMessages} />
+
+    {featuredMatch && <section className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.08] p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-emerald-500">Partido del grupo</p>
+          <h2 className="mt-1 text-lg font-extrabold">{featuredMatch.title}</h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{new Date(featuredMatch.scheduledAt).toLocaleString('es-AR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {featuredMatch.participants.length} jugador{featuredMatch.participants.length === 1 ? '' : 'es'} anotado{featuredMatch.participants.length === 1 ? '' : 's'}</p>
+        </div>
+        <button onClick={() => onOpenMatch ? onOpenMatch(featuredMatch.id) : onNavigate('matches')} className="min-h-11 rounded-xl bg-emerald-500 px-5 text-sm font-extrabold text-ink">Ver partido</button>
+      </div>
+    </section>}
 
     <section data-tour="home-season" className="mt-6">
       <div className="mb-3 flex items-center justify-between"><h2 className="font-extrabold">Mi temporada</h2><span className="text-xs text-slate-400">{totals.matches} partidos</span></div>

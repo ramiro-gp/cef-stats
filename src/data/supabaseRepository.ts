@@ -50,7 +50,7 @@ interface StatEntryRow {
 
 export type StatScope = { type: 'personal'; userId: string } | { type: 'group'; userId: string; groupId: string } | { type: 'all'; userId: string; groupIds: string[] }
 export type StatEntryInput = Pick<StatEntry, 'result' | 'goals' | 'assists' | 'matchId' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'> & { playedAt?: string }
-export type StatEntryUpdateInput = Partial<StatEntryInput> & { scope?: Exclude<StatScope, { type: 'all' }> }
+export type StatEntryUpdateInput = Omit<Partial<StatEntryInput>, 'matchId' | 'team'> & { matchId?: string | null; team?: MatchTeam | null; scope?: Exclude<StatScope, { type: 'all' }> }
 
 const activeGroupStorage = createStringStorageAdapter('cef-stats-active-supabase-group')
 
@@ -64,6 +64,14 @@ function groupError(message: string): string {
   if (normalized.includes('group_emoji')) return 'Falta ejecutar supabase/patches/011_add_group_emoji.sql.'
   if (normalized.includes('invalid invite code')) return 'No encontramos un grupo con ese código.'
   if (normalized.includes('already a member') || normalized.includes('duplicate')) return 'Ya pertenecés a ese grupo.'
+  if (normalized.includes('kick_group_member') && (normalized.includes('does not exist') || normalized.includes('schema cache') || normalized.includes('could not find'))) return 'Falta ejecutar supabase/patches/016_kick_group_members.sql.'
+  if (normalized.includes('delete_group_as_admin') && (normalized.includes('does not exist') || normalized.includes('schema cache') || normalized.includes('could not find'))) return 'Falta ejecutar supabase/patches/017_match_cleanup_group_delete_and_f8_capacity.sql.'
+  if (normalized.includes('kick_group_member') || normalized.includes('only group admins')) return 'Sólo un admin del grupo puede echar integrantes.'
+  if (normalized.includes('only group admins can delete')) return 'Sólo un admin del grupo puede eliminarlo.'
+  if (normalized.includes('admins can only kick')) return 'Un admin no puede echar owners ni otros admins.'
+  if (normalized.includes('cannot remove the last owner')) return 'No podés echar al último owner del grupo.'
+  if (normalized.includes('use leave group')) return 'Para salir vos del grupo usá la opción de salir.'
+  if (normalized.includes('member not found')) return 'Ese integrante ya no está en el grupo.'
   if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para realizar esta acción. Revisá las policies RLS.'
   if (normalized.includes('create_group_with_membership') || normalized.includes('join_group_by_invite')) return 'Falta actualizar el schema de Supabase. Volvé a ejecutar supabase/schema.sql.'
   return message
@@ -191,6 +199,16 @@ export const supabaseRepository = {
     if (result.error) throw new Error(groupError(result.error.message))
   },
 
+  async kickGroupMember(groupId: string, userId: string): Promise<void> {
+    const result = await client().rpc('kick_group_member', { p_group_id: groupId, p_user_id: userId })
+    if (result.error) throw new Error(groupError(result.error.message))
+  },
+
+  async deleteGroup(groupId: string): Promise<void> {
+    const result = await client().rpc('delete_group_as_admin', { p_group_id: groupId })
+    if (result.error) throw new Error(groupError(result.error.message))
+  },
+
   async listStatEntries(scope: StatScope): Promise<StatEntry[]> {
     if (scope.type === 'all' && !scope.groupIds.length) return []
     let query = client().from('stat_entries').select(statColumns).order('played_at', { ascending: false })
@@ -256,8 +274,8 @@ export const supabaseRepository = {
     if (input.result !== undefined) values.result = input.result
     if (input.goals !== undefined) values.goals = input.goals
     if (input.assists !== undefined) values.assists = input.assists
-    if (input.matchId !== undefined) { values.match_id = input.matchId; values.local_match_id = null }
-    if (input.team !== undefined) values.team = input.team
+    if ('matchId' in input) { values.match_id = input.matchId ?? null; values.local_match_id = null }
+    if ('team' in input) values.team = input.team ?? null
     if (input.matchType !== undefined) values.match_type = input.matchType
     if (input.footballFormat !== undefined) values.football_format = input.footballFormat
     if (input.playedPosition !== undefined) values.played_position = input.playedPosition || null

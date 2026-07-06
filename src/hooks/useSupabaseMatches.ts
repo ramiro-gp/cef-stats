@@ -22,6 +22,11 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     return match
   }, [scopeKey])
 
+  const removeMatchFromState = useCallback((matchId: string) => {
+    setMatchState(current => ({ ...current, matches: current.matches.filter(match => match.id !== matchId) }))
+    setEntries(current => current.filter(entry => entry.matchId !== matchId))
+  }, [])
+
   const load = useCallback(async () => {
     const currentRequestId = ++requestId.current
     if (!userId) {
@@ -98,6 +103,7 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
       if (match.createdByUserId !== userId) return []
       const leavingParticipant = match.participants.find(participant => participant.userId === userId)
       const participants = match.participants.filter(participant => participant.userId !== userId)
+      if (participants.length === 0) return []
       const nextMatch = { ...match, participants, mvpVotes: match.mvpVotes?.filter(vote => vote.voterUserId !== userId && vote.participantId !== leavingParticipant?.id), comments: match.comments?.filter(comment => comment.userId !== userId) }
       const summary = getMatchMvpSummary(nextMatch)
       const mvpParticipantId = summary.status === 'winner' ? summary.leaderParticipantIds[0] : undefined
@@ -127,7 +133,14 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
 
   const addGuest = useCallback((matchId: string, values: { name: string; avatar?: string; team: MatchTeam }) => mutate(async () => upsert(await supabaseMatchRepository.addGuest(matchId, values))), [mutate, upsert])
   const updateGuest = useCallback((matchId: string, guestId: string, values: { name: string; avatar?: string }) => mutate(async () => upsert(await supabaseMatchRepository.updateGuest(matchId, guestId, values))), [mutate, upsert])
-  const removeGuest = useCallback((matchId: string, guestId: string) => mutate(async () => upsert(await supabaseMatchRepository.removeGuest(matchId, guestId))), [mutate, upsert])
+  const removeGuest = useCallback((matchId: string, guestId: string) => mutate(async () => {
+    const match = await supabaseMatchRepository.removeGuest(matchId, guestId)
+    if (!match) {
+      removeMatchFromState(matchId)
+      return null
+    }
+    return upsert(match)
+  }), [mutate, removeMatchFromState, upsert])
   const saveGuestStats = useCallback((matchId: string, guestId: string, goals: number, assists: number) => mutate(async () => upsert(await supabaseMatchRepository.saveGuestStats(matchId, guestId, goals, assists))), [mutate, upsert])
 
   const saveStats = useCallback((matchId: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'team' | 'matchType' | 'footballFormat' | 'playedPosition'>) => mutate(async () => {

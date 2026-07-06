@@ -96,5 +96,17 @@ export function useSupabaseGroups(userId: string | null) {
     setGroups(current => current.map(group => group.id === id ? updated : group))
   }, [])
 
-  return { groups, scopes, allScope, personalScope, activeScope, activeSharedGroup, members: activeSharedGroup ? members : [], allMembers, loading, ready: !userId || loadedUserId === userId, membersLoading: activeSharedGroup ? membersLoading : false, error, selectGroup, createGroup, joinGroup, updateGroup, reload: loadGroups }
+  const kickMember = useCallback(async (groupId: string, targetUserId: string) => {
+    await supabaseRepository.kickGroupMember(groupId, targetUserId)
+    const loaded = await loadGroups()
+    setMembers(await supabaseRepository.getMembers(groupId))
+    setAllMembers(await supabaseRepository.getMembersForGroups(loaded.map(group => group.id)))
+  }, [loadGroups])
+
+  const deleteGroup = useCallback(async (groupId: string) => {
+    await supabaseRepository.deleteGroup(groupId)
+    await loadGroups()
+  }, [loadGroups])
+
+  return { groups, scopes, allScope, personalScope, activeScope, activeSharedGroup, members: activeSharedGroup ? members : [], allMembers, loading, ready: !userId || loadedUserId === userId, membersLoading: activeSharedGroup ? membersLoading : false, error, selectGroup, createGroup, joinGroup, updateGroup, kickMember, deleteGroup, reload: loadGroups }
 }

@@ -32,7 +32,7 @@ interface Props {
   globalWorldCupsWon: number
   theme: ThemeMode
   onSaveUser: (user: User) => void | string | Promise<void | string>
-  onUpdateEntry: (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { contextId: string }) => void | Promise<void>
+  onUpdateEntry: (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { contextId: string; unlinkMatch?: boolean }) => void | Promise<void>
   onDeleteEntry: (id: string) => void | Promise<void>
   onLinkEntry: (entryId: string, matchId: string, team: MatchTeam, result?: MatchResult) => boolean | Promise<boolean>
   onNotify: (text: string, tone?: 'success' | 'error') => void
@@ -64,6 +64,8 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
   const [linkEntry, setLinkEntry] = useState<StatEntry | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState('')
+  const [confirmDeleteEntry, setConfirmDeleteEntry] = useState<string | null>(null)
+  const [deletingEntry, setDeletingEntry] = useState<string | null>(null)
   const [localHistoryState, setLocalHistoryState] = useState({ userId: user.id, page: 1 })
   const [localHistoryFilters, setLocalHistoryFilters] = useState<StatFilters>(DEFAULT_STAT_FILTERS)
   const localHistoryPage = localHistoryState.userId === user.id ? localHistoryState.page : 1
@@ -85,6 +87,18 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
   const changeHistoryFilters = (nextFilters: StatFilters) => {
     if (onHistoryFiltersChange) onHistoryFiltersChange(nextFilters)
     else { setLocalHistoryFilters(nextFilters); setLocalHistoryState({ userId: user.id, page: 1 }) }
+  }
+  const deleteEntry = async (entry: StatEntry) => {
+    if (confirmDeleteEntry !== entry.id) { setConfirmDeleteEntry(entry.id); return }
+    setDeletingEntry(entry.id)
+    try {
+      await onDeleteEntry(entry.id)
+      setConfirmDeleteEntry(null)
+    } catch (reason) {
+      onNotify(reason instanceof Error ? reason.message : 'No pudimos eliminar la carga.', 'error')
+    } finally {
+      setDeletingEntry(null)
+    }
   }
   const logout = async () => {
     if (loggingOut) return
@@ -126,7 +140,7 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
           {!historyLoading && history.map((entry, index) => { const linkedMatch = entry.matchId ? matches.find(match => match.id === entry.matchId) : undefined; const matchGroupName = linkedMatch ? (linkedMatch.groupId ? linkedMatch.groupName ?? groups.find(item => item.id === linkedMatch.groupId)?.name ?? 'Grupo anfitrión' : 'Sin grupo') : undefined; const contextName = entry.scopeType === 'personal' || !entry.groupId || entry.groupId.startsWith('personal:') ? 'Personal sin grupo' : groups.find(item => item.id === entry.groupId)?.name ?? linkedMatch?.groupName ?? 'Grupo no disponible'; const resultText = entry.result === 'win' ? 'Gané' : entry.result === 'draw' ? 'Empaté' : 'Perdí'; return <div key={entry.id} className={`flex items-center gap-3 p-4 sm:p-5 ${index !== history.length - 1 ? 'border-b border-slate-100 dark:border-white/5' : ''}`}>
             <div className={`grid h-10 w-10 place-items-center rounded-xl ${entry.result === 'win' ? 'bg-emerald-500/10 text-emerald-500' : entry.result === 'draw' ? 'bg-amber-500/10 text-amber-500' : 'bg-rose-500/10 text-rose-500'}`}>{entry.result === 'win' ? <MedalIcon className="h-5 w-5" /> : <span className="font-black">{entry.result === 'draw' ? 'E' : 'D'}</span>}</div>
             <div className="min-w-0 flex-1"><div className="font-bold">{resultText}</div><div className="mt-1 text-xs capitalize text-slate-400">{formatEntryDate(entry.playedAt ?? entry.createdAt)}</div><div className="mt-1 text-[10px] font-semibold text-slate-400">{formatStatContext(entry)}</div><div className="mt-1 text-[10px] font-bold text-slate-500 dark:text-slate-300">Contexto: {contextName}</div>{linkedMatch ? <><button onClick={() => onOpenMatch(linkedMatch.id)} className="mt-1 block max-w-full truncate text-left text-[10px] font-bold text-emerald-500 underline-offset-2 hover:underline">{linkedMatch.title} →</button>{matchGroupName && <div className="mt-1 text-[10px] font-medium text-slate-400">Partido en: {matchGroupName}</div>}</> : entry.matchId ? <div className="mt-1 text-[10px] font-bold leading-4 text-slate-400">Partido vinculado no disponible.</div> : null}</div>
-            <div className="flex flex-wrap justify-end gap-2 text-center"><div><div className="font-black">{entry.goals}</div><div className="text-[9px] text-slate-400">GOL</div></div><div><div className="font-black">{entry.assists}</div><div className="text-[9px] text-slate-400">ASIS</div></div>{!entry.matchId && <button onClick={() => setLinkEntry(entry)} className="min-h-10 rounded-xl border border-emerald-500/30 px-2 text-[10px] font-bold text-emerald-500">Vincular a partido</button>}<button onClick={() => setSelectedEntry(entry)} className="min-h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-white/10">Editar</button></div>
+            <div className="flex flex-wrap justify-end gap-2 text-center"><div><div className="font-black">{entry.goals}</div><div className="text-[9px] text-slate-400">GOL</div></div><div><div className="font-black">{entry.assists}</div><div className="text-[9px] text-slate-400">ASIS</div></div>{!entry.matchId && <button onClick={() => setLinkEntry(entry)} className="min-h-10 rounded-xl border border-emerald-500/30 px-2 text-[10px] font-bold text-emerald-500">Vincular a partido</button>}<button onClick={() => setSelectedEntry(entry)} className="min-h-10 rounded-xl border border-slate-200 px-3 text-xs font-bold dark:border-white/10">Editar</button><button onClick={() => void deleteEntry(entry)} onBlur={() => setConfirmDeleteEntry(current => current === entry.id ? null : current)} disabled={Boolean(deletingEntry)} className={`min-h-10 rounded-xl px-3 text-xs font-bold disabled:opacity-50 ${confirmDeleteEntry === entry.id ? 'bg-rose-500 text-white' : 'text-rose-500 hover:bg-rose-500/10'}`}>{deletingEntry === entry.id ? 'Borrando...' : confirmDeleteEntry === entry.id ? 'Confirmar' : 'Eliminar'}</button></div>
           </div>})}
         </div>
         {historyPages > 1 && <div className="mt-4 flex items-center justify-between gap-3"><button onClick={() => changeHistoryPage(activeHistoryPage - 1)} disabled={activeHistoryPage <= 1 || historyLoading} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-bold disabled:opacity-40 dark:border-white/10">← Anterior</button><span className="text-xs font-bold text-slate-400">Página {activeHistoryPage} de {historyPages}</span><button onClick={() => changeHistoryPage(activeHistoryPage + 1)} disabled={activeHistoryPage >= historyPages || historyLoading} className="min-h-11 rounded-xl border border-slate-200 px-4 text-sm font-bold disabled:opacity-40 dark:border-white/10">Siguiente →</button></div>}

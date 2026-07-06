@@ -50,8 +50,12 @@ export function useLocalStore() {
     return entry
   }, [state.activeGroupId, state.entries.length, state.matches, state.user.id])
 
-  const updateEntry = useCallback((id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { groupId?: string }) => {
-    setState(current => ({ ...current, entries: current.entries.map(entry => entry.id === id ? { ...entry, ...values } : entry) }))
+  const updateEntry = useCallback((id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { groupId?: string; matchId?: string | null; team?: MatchTeam | null }) => {
+    setState(current => ({ ...current, entries: current.entries.map(entry => {
+      if (entry.id !== id) return entry
+      const next: StatEntry = { ...entry, ...values, matchId: values.matchId === null ? undefined : values.matchId ?? entry.matchId, team: values.team === null ? undefined : values.team ?? entry.team }
+      return next
+    }) }))
   }, [])
 
   const deleteEntry = useCallback((id: string) => {
@@ -109,7 +113,7 @@ export function useLocalStore() {
       createdByUserId: state.user.id,
       inviteCode: createMatchInviteCode(state.matches.map(existing => existing.inviteCode)),
       status: 'open',
-      participants: [],
+      participants: [{ id: createId('participant'), matchId: id, userId: state.user.id, type: 'registered_user', createdAt }],
       guestStats: [],
       createdAt,
       updatedAt: createdAt,
@@ -142,7 +146,13 @@ export function useLocalStore() {
       if (!match || !match.participants.some(participant => participant.userId === current.user.id)) return current
       const event: MatchEvent = { id: createId('event'), groupId: match.groupId, matchId, type: 'left_match', userId: current.user.id, createdAt }
       const leavingParticipant = match.participants.find(participant => participant.userId === current.user.id)
-      return { ...current, matches: current.matches.map(item => item.id === matchId ? { ...item, participants: item.participants.filter(participant => participant.userId !== current.user.id), mvpUserId: item.mvpUserId === current.user.id ? undefined : item.mvpUserId, mvpParticipantId: item.mvpParticipantId === leavingParticipant?.id ? undefined : item.mvpParticipantId, updatedAt: createdAt } : item), matchEvents: [...current.matchEvents, event] }
+      const updatedMatches = current.matches.flatMap(item => {
+        if (item.id !== matchId) return item
+        const participants = item.participants.filter(participant => participant.userId !== current.user.id)
+        if (participants.length === 0) return []
+        return { ...item, participants, mvpUserId: item.mvpUserId === current.user.id ? undefined : item.mvpUserId, mvpParticipantId: item.mvpParticipantId === leavingParticipant?.id ? undefined : item.mvpParticipantId, updatedAt: createdAt }
+      })
+      return { ...current, matches: updatedMatches, matchEvents: [...current.matchEvents, event] }
     })
   }, [])
 
@@ -202,7 +212,13 @@ export function useLocalStore() {
       const guest = match?.participants.find(participant => participant.id === participantId && participant.type === 'guest')
       if (!match || !guest) return current
       const event: MatchEvent = { id: createId('event'), groupId: match.groupId, matchId, type: 'guest_removed', participantId, guestName: guest.guestName, createdAt }
-      return { ...current, matches: current.matches.map(item => item.id === matchId ? { ...item, participants: item.participants.filter(participant => participant.id !== participantId), guestStats: item.guestStats.filter(stats => stats.participantId !== participantId), mvpParticipantId: item.mvpParticipantId === participantId ? undefined : item.mvpParticipantId, updatedAt: createdAt } : item), matchEvents: [...current.matchEvents, event] }
+      const updatedMatches = current.matches.flatMap(item => {
+        if (item.id !== matchId) return item
+        const participants = item.participants.filter(participant => participant.id !== participantId)
+        if (participants.length === 0) return []
+        return { ...item, participants, guestStats: item.guestStats.filter(stats => stats.participantId !== participantId), mvpParticipantId: item.mvpParticipantId === participantId ? undefined : item.mvpParticipantId, updatedAt: createdAt }
+      })
+      return { ...current, matches: updatedMatches, matchEvents: [...current.matchEvents, event] }
     })
   }, [])
 

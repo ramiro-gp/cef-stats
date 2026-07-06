@@ -101,6 +101,11 @@ function matchError(message: string): string {
   return message
 }
 
+function isMissingMatchError(reason: unknown): boolean {
+  const message = reason instanceof Error ? reason.message.toLowerCase() : String(reason).toLowerCase()
+  return message.includes('no rows') || message.includes('0 rows') || message.includes('not found') || message.includes('no pudimos cargar el partido')
+}
+
 async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
   if (!rows.length) return []
   const db = client()
@@ -290,10 +295,15 @@ export const supabaseMatchRepository = {
     return this.getMatch(matchId)
   },
 
-  async removeGuest(matchId: string, guestId: string): Promise<Match> {
+  async removeGuest(matchId: string, guestId: string): Promise<Match | null> {
     const result = await client().from('match_guests').delete().eq('id', guestId).eq('match_id', matchId)
     if (result.error) throw new Error(matchError(result.error.message))
-    return this.getMatch(matchId)
+    try {
+      return await this.getMatch(matchId)
+    } catch (reason) {
+      if (isMissingMatchError(reason)) return null
+      throw reason
+    }
   },
 
   async saveGuestStats(matchId: string, guestId: string, goals: number, assists: number): Promise<Match> {

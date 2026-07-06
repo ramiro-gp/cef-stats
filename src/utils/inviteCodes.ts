@@ -19,7 +19,7 @@ export function formatInviteCode(value: string): string {
 export function formatInviteCodeInput(value: string): string {
   if (/[/?#]/.test(value)) return value
   const compact = compactInviteCode(value)
-  if (compact.startsWith('CEF') || compact.length > 8) return value.toUpperCase()
+  if (compact.startsWith('CEF') || compact.startsWith('FUL') || compact.length > 8) return value.toUpperCase()
   return compact.length > 4 ? `${compact.slice(0, 4)}-${compact.slice(4, 8)}` : compact
 }
 
@@ -32,4 +32,5 @@ export function isSupportedInviteCode(value: string): boolean {
   return new RegExp(`^${READABLE_ALPHABET_PATTERN}{8}$`).test(compact)
     || /^CEF[A-Z0-9]{5}$/.test(compact)
     || new RegExp(`^CEF${READABLE_ALPHABET_PATTERN}{12}$`).test(compact)
+    || new RegExp(`^FUL${READABLE_ALPHABET_PATTERN}{12}$`).test(compact)
 }

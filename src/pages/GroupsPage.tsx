@@ -6,6 +6,7 @@ import { createGroupInviteLink } from '../utils/groups'
 import { defaultGroupEmoji, groupEmojiOptions } from '../data/groupEmojiOptions'
 import { UserAvatar } from '../components/UserAvatar'
 import { formatInviteCodeInput } from '../utils/inviteCodes'
+import type { ScheduleUndoableAction } from '../utils/criticalActions'
 
 interface Props {
   groups: Group[]
@@ -21,9 +22,12 @@ interface Props {
   onCreateGroup: (name: string, emoji?: string) => Group | Promise<Group>
   onJoinGroup: (code: string) => Group | Promise<Group>
   onUpdateGroup: (id: string, values: Partial<Pick<Group, 'name' | 'emoji'>>) => void | Promise<void>
+  onKickMember?: (groupId: string, userId: string) => void | Promise<void>
+  onDeleteGroup?: (groupId: string) => void | Promise<void>
+  onUndoableAction?: ScheduleUndoableAction
 }
 
-export function GroupsPage({ groups, currentGroup, members = [], memberships = [], currentUserId, remoteMode = false, loading = false, membersLoading = false, loadError = '', onSelectGroup, onCreateGroup, onJoinGroup, onUpdateGroup }: Props) {
+export function GroupsPage({ groups, currentGroup, members = [], memberships = [], currentUserId, remoteMode = false, loading = false, membersLoading = false, loadError = '', onSelectGroup, onCreateGroup, onJoinGroup, onUpdateGroup, onKickMember, onDeleteGroup, onUndoableAction }: Props) {
   const [mode, setMode] = useState<'list' | 'create' | 'join' | 'edit'>('list')
   const [value, setValue] = useState('')
   const [editing, setEditing] = useState<Group | null>(null)
@@ -31,7 +35,20 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [emoji, setEmoji] = useState(defaultGroupEmoji)
+  const [confirmKick, setConfirmKick] = useState<string | null>(null)
+  const [kicking, setKicking] = useState<string | null>(null)
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState(false)
+  const [deletingGroup, setDeletingGroup] = useState(false)
+  const [memberFeedback, setMemberFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
+  const currentMembership = currentGroup ? memberships.find(member => member.groupId === currentGroup.id && member.userId === currentUserId) : undefined
   const canEditGroup = (groupId: string) => !remoteMode || memberships.some(member => member.groupId === groupId && member.userId === currentUserId && member.role === 'owner')
+  const canManageMembers = Boolean(onKickMember && currentGroup && currentMembership && ['owner', 'admin'].includes(currentMembership.role))
+  const canDeleteCurrentGroup = Boolean(onDeleteGroup && currentGroup && currentMembership && ['owner', 'admin'].includes(currentMembership.role))
+  const canKickMember = (member: GroupMemberView) => {
+    if (!canManageMembers || !currentUserId || member.userId === currentUserId) return false
+    if (currentMembership?.role === 'admin') return member.role === 'member'
+    return true
+  }
 
   const open = (nextMode: typeof mode, group?: Group) => { setMode(nextMode); setEditing(group ?? null); setValue(group?.name ?? ''); setEmoji(group?.emoji || defaultGroupEmoji); setError('') }
   const copy = (group: Group) => {
@@ -53,6 +70,34 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
     } finally {
       setSubmitting(false)
     }
+  }
+  const kickMember = async (member: GroupMemberView) => {
+    if (!currentGroup || !onKickMember || !canKickMember(member)) return
+    if (confirmKick !== member.id) { setConfirmKick(member.id); return }
+    setConfirmKick(null)
+    if (onUndoableAction) {
+      onUndoableAction({ text: `${member.name} será echado del grupo.`, successText: `${member.name} ya no pertenece al grupo.`, errorText: 'No pudimos echar a este integrante.', commit: () => onKickMember(currentGroup.id, member.userId) })
+      return
+    }
+    setKicking(member.id)
+    setMemberFeedback(null)
+    try { await onKickMember(currentGroup.id, member.userId) }
+    catch (reason) { setMemberFeedback({ tone: 'error', text: reason instanceof Error ? reason.message : 'No pudimos echar a este integrante.' }) }
+    finally { setKicking(null) }
+  }
+  const deleteCurrentGroup = async () => {
+    if (!currentGroup || !onDeleteGroup || !canDeleteCurrentGroup) return
+    if (!confirmDeleteGroup) { setConfirmDeleteGroup(true); return }
+    setConfirmDeleteGroup(false)
+    if (onUndoableAction) {
+      onUndoableAction({ text: `El grupo ${currentGroup.name} será eliminado.`, successText: `El grupo ${currentGroup.name} fue eliminado.`, errorText: 'No pudimos eliminar el grupo.', commit: () => onDeleteGroup(currentGroup.id) })
+      return
+    }
+    setDeletingGroup(true)
+    setMemberFeedback(null)
+    try { await onDeleteGroup(currentGroup.id) }
+    catch (reason) { setMemberFeedback({ tone: 'error', text: reason instanceof Error ? reason.message : 'No pudimos eliminar el grupo.' }) }
+    finally { setDeletingGroup(false) }
   }
 
   return <>
@@ -77,7 +122,7 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
           })}
         </section>
 
-        {currentGroup && <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.04]"><div className="flex items-center justify-between"><h3 className="font-extrabold">Miembros</h3><span className="text-xs text-slate-400">{currentGroup.memberCount}</span></div>{membersLoading ? <p className="mt-4 text-sm text-slate-400">Cargando miembros...</p> : <div className="mt-4 grid gap-2 sm:grid-cols-2">{members.map(member => <div key={member.id} className="flex items-center gap-3 rounded-xl bg-slate-100 p-3 dark:bg-white/5"><UserAvatar value={member.avatar} fallback={member.name.slice(0, 2).toUpperCase()} className="h-10 w-10 rounded-xl text-xs" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{member.name}</span><span className="block truncate text-xs text-slate-400">@{member.handle}</span></span><span className="text-[9px] font-bold uppercase text-emerald-500">{member.role}</span></div>)}{members.length === 0 && <p className="text-sm text-slate-400">No hay miembros para mostrar.</p>}</div>}</section>}
+        {currentGroup && <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.04]"><div className="flex items-center justify-between"><h3 className="font-extrabold">Miembros</h3><span className="text-xs text-slate-400">{currentGroup.memberCount}</span></div>{memberFeedback && <p className={`mt-3 rounded-xl p-3 text-xs font-bold ${memberFeedback.tone === 'success' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500'}`}>{memberFeedback.text}</p>}{membersLoading ? <p className="mt-4 text-sm text-slate-400">Cargando miembros...</p> : <div className="mt-4 grid gap-2 sm:grid-cols-2">{members.map(member => <div key={member.id} className="flex items-center gap-3 rounded-xl bg-slate-100 p-3 dark:bg-white/5"><UserAvatar value={member.avatar} fallback={member.name.slice(0, 2).toUpperCase()} className="h-10 w-10 rounded-xl text-xs" /><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold">{member.name}</span><span className="block truncate text-xs text-slate-400">@{member.handle}</span></span><span className="text-[9px] font-bold uppercase text-emerald-500">{member.role}</span>{canKickMember(member) && <button type="button" onClick={() => void kickMember(member)} onBlur={() => setConfirmKick(current => current === member.id ? null : current)} disabled={Boolean(kicking)} className={`min-h-9 shrink-0 rounded-lg px-2 text-[10px] font-bold transition disabled:opacity-50 ${confirmKick === member.id ? 'bg-rose-500 text-white' : 'text-rose-500 hover:bg-rose-500/10'}`}>{kicking === member.id ? 'Echando...' : confirmKick === member.id ? 'Confirmar' : 'Echar'}</button>}</div>)}{members.length === 0 && <p className="text-sm text-slate-400">No hay miembros para mostrar.</p>}</div>}</section>}
       </div>
 
       <aside data-tour="groups-actions" className="h-fit rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-white/[0.04]">
@@ -85,6 +130,11 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
           <h3 className="font-extrabold">Gestionar grupos</h3><p className="mt-1 text-sm leading-6 text-slate-400">{remoteMode ? 'Membresías guardadas en Supabase.' : 'Todo queda guardado localmente.'}</p>
           <div className="mt-5 space-y-2.5"><button onClick={() => open('create')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 font-bold text-ink"><PlusCircleIcon className="h-5 w-5"/> Crear grupo {remoteMode ? '' : 'local'}</button><button onClick={() => open('join')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 font-bold dark:border-white/10"><UsersIcon className="h-5 w-5" /> Unirme con código</button></div>
           {currentGroup && <div className="mt-6 rounded-xl bg-slate-100 p-3 dark:bg-white/5"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Grupo activo</p><p className="mt-1 font-bold">{currentGroup.name}</p><p className="mt-1 font-mono text-xs text-emerald-500">{currentGroup.code}</p></div>}
+          {canDeleteCurrentGroup && <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
+            <p className="text-xs font-extrabold text-rose-500">Zona de peligro</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-300">Eliminar el grupo borra sus membresías, partidos y cargas asociadas.</p>
+            <button type="button" onClick={() => void deleteCurrentGroup()} onBlur={() => setConfirmDeleteGroup(false)} disabled={deletingGroup} className={`mt-3 min-h-10 w-full rounded-xl text-xs font-bold transition disabled:opacity-50 ${confirmDeleteGroup ? 'bg-rose-500 text-white' : 'border border-rose-500/30 text-rose-500 hover:bg-rose-500/10'}`}>{deletingGroup ? 'Eliminando...' : confirmDeleteGroup ? 'Confirmar eliminación del grupo' : 'Eliminar grupo'}</button>
+          </div>}
         </> : <>
           <button onClick={() => open('list')} disabled={submitting} className="mb-4 min-h-10 text-xs font-bold text-emerald-500 disabled:opacity-50">← Volver</button>
           <h3 className="font-extrabold">{mode === 'create' ? 'Nuevo grupo' : mode === 'join' ? 'Unirme a un grupo' : 'Editar grupo'}</h3>

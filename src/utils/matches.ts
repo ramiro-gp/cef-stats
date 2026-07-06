@@ -1,7 +1,7 @@
 import type { Match, MatchFormat, MatchParticipant, MatchResult, MatchScore, MatchTeam, StatEntry, User } from '../types'
 import { formatInviteCode, inviteCodesEqual, isSupportedInviteCode } from './inviteCodes'
 
-const BASE_TEAM_SIZE: Record<MatchFormat, number> = { F5: 5, F6: 6, F7: 7, F8: 8, F11: 11 }
+const TEAM_SIZE_LIMIT: Record<MatchFormat, number> = { F5: 7, F6: 8, F7: 9, F8: 15, F11: 13 }
 
 function identityInitials(name?: string, handle?: string): string {
   const words = name?.trim().split(/\s+/).filter(Boolean) ?? []
@@ -62,7 +62,7 @@ export function getMatchMvpSummary(match: Match, userId?: string): MatchMvpSumma
 }
 
 export function getMaxTeamSize(format: MatchFormat = 'F5'): number {
-  return BASE_TEAM_SIZE[format] + 2
+  return TEAM_SIZE_LIMIT[format]
 }
 
 export function isTeamFull(match: Match, team: MatchTeam, userId?: string): boolean {

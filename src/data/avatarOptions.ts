@@ -1,4 +1,4 @@
-export type AvatarKind = 'horse' | 'pig' | 'dog' | 'cat' | 'chicken' | 'person' | 'alien' | 'astronaut' | 'police' | 'fan' | 'wizard' | 'ogre' | 'ninja' | 'pirate'
+export type AvatarKind = 'horse' | 'pig' | 'dog' | 'cat' | 'chicken' | 'person' | 'alien' | 'astronaut' | 'police' | 'fan' | 'wizard' | 'ogre' | 'ninja' | 'pirate' | 'dictator'
 
 export interface AvatarOption {
   key: string
@@ -33,6 +33,7 @@ export const avatarOptions: AvatarOption[] = [
   { key: 'avatar:ogro', label: 'Ogro', kind: 'ogre', background: '#365314', primary: '#84cc16', secondary: '#d9f99d' },
   { key: 'avatar:ninja', label: 'Ninja', kind: 'ninja', background: '#18181b', primary: '#27272a', secondary: '#ef4444', skin: '#c98258' },
   { key: 'avatar:pirata', label: 'Pirata', kind: 'pirate', background: '#164e63', primary: '#ef4444', secondary: '#facc15', skin: '#e7ad7c', hair: '#25140d' },
+  { key: 'avatar:dictador', label: 'Dictador', kind: 'dictator', background: '#1f2937', primary: '#334155', secondary: '#facc15', skin: '#d99b6c', hair: '#1c120c' },
 ]
 
 const legacyAvatarAliases: Record<string, string> = {
