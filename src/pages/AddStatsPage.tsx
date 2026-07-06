@@ -38,8 +38,9 @@ interface Props {
 }
 
 export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, entries, user, defaultContextId = '', personalContextId = '' }: Props) {
-  const initialMatchType = user.defaultMatchType === 'ask' ? 'friendly' : user.defaultMatchType
-  const initialFormat = user.defaultFootballFormat === 'ask' ? 'F5' : user.defaultFootballFormat
+  const defaultContextGroup = groups.find(group => group.id === defaultContextId)
+  const initialMatchType = defaultContextGroup?.defaultMatchType ?? (user.defaultMatchType === 'ask' ? 'friendly' : user.defaultMatchType)
+  const initialFormat = defaultContextGroup?.defaultFootballFormat ?? (user.defaultFootballFormat === 'ask' ? 'F5' : user.defaultFootballFormat)
   const [result, setResult] = useState<MatchResult | null>(null)
   const [goals, setGoals] = useState(0)
   const [assists, setAssists] = useState(0)
@@ -66,6 +67,8 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
     setLinked({ match, team, automaticResult })
     setContextId(match.groupId || personalContextId)
     if (automaticResult) setResult(automaticResult)
+    const matchGroup = groups.find(group => group.id === match.groupId)
+    if (matchGroup?.defaultMatchType) setMatchType(matchGroup.defaultMatchType)
     if (formatOptions.includes(match.format as StatFootballFormat)) setFootballFormat(match.format as StatFootballFormat)
   }
 
@@ -91,7 +94,7 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
     <PageTitle eyebrow="Carga rápida" title="¿Cómo te fue hoy?" subtitle="Tres toques y listo. Sin vueltas." />
     <div className="space-y-5">
       <section data-tour="add-context" className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-4">
-        <label className="block"><span className="text-xs font-bold uppercase tracking-wider text-emerald-500">Estás cargando dentro de</span><select value={contextId} onChange={event => { setContextId(event.target.value); setLinked(null) }} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí un contexto</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}{personalContextId && <option value={personalContextId}>Personal (sin grupo)</option>}</select></label>
+        <label className="block"><span className="text-xs font-bold uppercase tracking-wider text-emerald-500">Estás cargando dentro de</span><select value={contextId} onChange={event => { const nextContextId = event.target.value; setContextId(nextContextId); setLinked(null); const selectedGroup = groups.find(group => group.id === nextContextId); if (selectedGroup?.defaultMatchType) setMatchType(selectedGroup.defaultMatchType); if (selectedGroup?.defaultFootballFormat) setFootballFormat(selectedGroup.defaultFootballFormat) }} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí un contexto</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}{personalContextId && <option value={personalContextId}>Personal (sin grupo)</option>}</select></label>
         {contextName && <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Esta carga se guardará en {contextName}.</p>}
         <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">El grupo que elijas verá tu carga. Si jugaste sin nadie de tu grupo, poné Personal.</p>
         <p className="mt-1 text-[11px] leading-5 text-slate-400">Si no aparece ningún grupo, <button type="button" onClick={() => onNavigate('groups')} className="font-bold text-emerald-500 underline underline-offset-2">creá o unite a uno</button>.</p>
@@ -135,6 +138,6 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
       {!result && <p className="-mt-2 text-center text-xs text-slate-400">Elegí un resultado para poder guardar</p>}
       {!contextId && <p className="-mt-2 text-center text-xs text-slate-400">Elegí dónde guardar la carga.</p>}
     </div>
-    {linking && <MatchCodePickerSheet matches={matches} groups={groups} entries={entries} userId={user.id} onSelect={selection => { setLinked(selection); setContextId(selection.match.groupId || personalContextId); if (selection.automaticResult) setResult(selection.automaticResult); if (formatOptions.includes(selection.match.format as StatFootballFormat)) setFootballFormat(selection.match.format as StatFootballFormat) }} onClose={() => setLinking(false)} />}
+    {linking && <MatchCodePickerSheet matches={matches} groups={groups} entries={entries} userId={user.id} onSelect={selection => { setLinked(selection); setContextId(selection.match.groupId || personalContextId); if (selection.automaticResult) setResult(selection.automaticResult); const matchGroup = groups.find(group => group.id === selection.match.groupId); if (matchGroup?.defaultMatchType) setMatchType(matchGroup.defaultMatchType); if (formatOptions.includes(selection.match.format as StatFootballFormat)) setFootballFormat(selection.match.format as StatFootballFormat) }} onClose={() => setLinking(false)} />}
   </div>
 }

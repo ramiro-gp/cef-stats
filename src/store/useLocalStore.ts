@@ -69,7 +69,7 @@ export function useLocalStore() {
     let created!: Group
     setState(current => {
       const createdAt = new Date().toISOString()
-      created = { id: createId('group'), name: name.trim(), code: createUniqueGroupCode(name, current.groups), memberCount: 1, gamesCount: 0, emoji, spicyMode: true, seeded: false }
+      created = { id: createId('group'), name: name.trim(), code: createUniqueGroupCode(name, current.groups), memberCount: 1, gamesCount: 0, emoji, defaultMatchType: 'friendly', defaultFootballFormat: 'F5', spicyMode: true, seeded: false }
       const membership: GroupMember = { id: createId('member'), groupId: created.id, userId: current.user.id, role: 'owner', joinedAt: createdAt }
       return { ...current, groups: [...current.groups, created], groupMembers: [...current.groupMembers, membership], activeGroupId: created.id }
     })
@@ -94,7 +94,7 @@ export function useLocalStore() {
     return joined
   }, [])
 
-  const updateGroup = useCallback((id: string, values: Partial<Pick<Group, 'name' | 'emoji' | 'spicyMode'>>) => {
+  const updateGroup = useCallback((id: string, values: Partial<Pick<Group, 'name' | 'emoji' | 'spicyMode' | 'defaultMatchType' | 'defaultFootballFormat'>>) => {
     setState(current => ({ ...current, groups: current.groups.map(item => item.id === id ? { ...item, ...values, spicyMode: true } : item) }))
   }, [])
 

@@ -10,6 +10,8 @@ interface GroupRow {
   invite_code: string
   created_by: string | null
   group_emoji?: string | null
+  default_match_type?: StatMatchType | null
+  default_football_format?: StatFootballFormat | null
   created_at: string
   updated_at: string
 }
@@ -43,6 +45,7 @@ interface StatEntryRow {
   match_type: StatMatchType | null
   football_format: StatFootballFormat | null
   played_position: PlayerPosition | null
+  deleted_group_name: string | null
   played_at: string
   created_at: string
   updated_at: string
@@ -62,6 +65,7 @@ function client() {
 function groupError(message: string): string {
   const normalized = message.toLowerCase()
   if (normalized.includes('group_emoji')) return 'Falta ejecutar supabase/patches/011_add_group_emoji.sql.'
+  if ((normalized.includes('default_match_type') || normalized.includes('default_football_format') || normalized.includes('deleted_group_name')) && (normalized.includes('does not exist') || normalized.includes('schema cache') || normalized.includes('could not find'))) return 'Falta ejecutar supabase/patches/019_group_defaults_and_safe_delete.sql.'
   if (normalized.includes('invalid invite code')) return 'No encontramos un grupo con ese código.'
   if (normalized.includes('already a member') || normalized.includes('duplicate')) return 'Ya pertenecés a ese grupo.'
   if (normalized.includes('kick_group_member') && (normalized.includes('does not exist') || normalized.includes('schema cache') || normalized.includes('could not find'))) return 'Falta ejecutar supabase/patches/016_kick_group_members.sql.'
@@ -78,14 +82,15 @@ function groupError(message: string): string {
 }
 
 function toGroup(row: GroupRow, memberCount: number): Group {
-  return { id: row.id, name: row.name, code: row.invite_code, memberCount, gamesCount: 0, emoji: row.group_emoji?.trim() || '⚽', spicyMode: true, seeded: false }
+  return { id: row.id, name: row.name, code: row.invite_code, memberCount, gamesCount: 0, emoji: row.group_emoji?.trim() || '⚽', defaultMatchType: row.default_match_type ?? 'friendly', defaultFootballFormat: row.default_football_format ?? 'F5', spicyMode: true, seeded: false }
 }
 
-const groupColumns = 'id,name,invite_code,created_by,group_emoji,created_at,updated_at'
+const groupColumns = 'id,name,invite_code,created_by,group_emoji,default_match_type,default_football_format,created_at,updated_at'
 
 function statError(message: string): string {
   const normalized = message.toLowerCase()
   if (normalized.includes('match_id') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
+  if (normalized.includes('deleted_group_name') && (normalized.includes('does not exist') || normalized.includes('schema cache') || normalized.includes('could not find'))) return 'Falta ejecutar supabase/patches/019_group_defaults_and_safe_delete.sql.'
   if ((normalized.includes('match_type') || normalized.includes('football_format') || normalized.includes('played_position')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/009_add_stat_entry_context.sql.'
   if (normalized.includes('stat_entries_football_format_check')) return 'Falta ejecutar supabase/patches/010_expand_stat_football_formats.sql.'
   if (normalized.includes('stat_entries') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/002_add_stat_entries.sql.'
@@ -108,13 +113,14 @@ function toStatEntry(row: StatEntryRow): StatEntry {
     matchType: row.match_type ?? 'friendly',
     footballFormat: row.football_format ?? 'F5',
     playedPosition: row.played_position ?? undefined,
+    deletedGroupName: row.deleted_group_name ?? undefined,
     playedAt: row.played_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
 }
 
-const statColumns = 'id,user_id,scope_type,group_id,result,goals,assists,match_id,local_match_id,team,match_type,football_format,played_position,played_at,created_at,updated_at'
+const statColumns = 'id,user_id,scope_type,group_id,result,goals,assists,match_id,local_match_id,team,match_type,football_format,played_position,deleted_group_name,played_at,created_at,updated_at'
 
 export const supabaseRepository = {
   getPersistedActiveGroupId: activeGroupStorage.load,
@@ -149,9 +155,14 @@ export const supabaseRepository = {
     return toGroup(updated.data, 1)
   },
 
-  async updateGroup(groupId: string, values: Pick<Group, 'name' | 'emoji'>): Promise<Group> {
+  async updateGroup(groupId: string, values: Partial<Pick<Group, 'name' | 'emoji' | 'defaultMatchType' | 'defaultFootballFormat'>>): Promise<Group> {
     const db = client()
-    const result = await db.from('groups').update({ name: values.name.trim(), group_emoji: values.emoji || '⚽', updated_at: new Date().toISOString() }).eq('id', groupId).select(groupColumns).single<GroupRow>()
+    const updateValues: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (values.name !== undefined) updateValues.name = values.name.trim()
+    if (values.emoji !== undefined) updateValues.group_emoji = values.emoji || '⚽'
+    if (values.defaultMatchType !== undefined) updateValues.default_match_type = values.defaultMatchType
+    if (values.defaultFootballFormat !== undefined) updateValues.default_football_format = values.defaultFootballFormat
+    const result = await db.from('groups').update(updateValues).eq('id', groupId).select(groupColumns).single<GroupRow>()
     if (result.error) throw new Error(groupError(result.error.message))
     const members = await this.getMembers(groupId)
     return toGroup(result.data, members.length)

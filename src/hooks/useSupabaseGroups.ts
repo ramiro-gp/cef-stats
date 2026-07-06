@@ -90,9 +90,9 @@ export function useSupabaseGroups(userId: string | null) {
     return joined
   }, [loadGroups, selectGroup])
 
-  const updateGroup = useCallback(async (id: string, values: Partial<Pick<Group, 'name' | 'emoji'>>) => {
+  const updateGroup = useCallback(async (id: string, values: Partial<Pick<Group, 'name' | 'emoji' | 'defaultMatchType' | 'defaultFootballFormat'>>) => {
     if (!values.name) return
-    const updated = await supabaseRepository.updateGroup(id, { name: values.name, emoji: values.emoji ?? '⚽' })
+    const updated = await supabaseRepository.updateGroup(id, { name: values.name, emoji: values.emoji ?? '⚽', defaultMatchType: values.defaultMatchType, defaultFootballFormat: values.defaultFootballFormat })
     setGroups(current => current.map(group => group.id === id ? updated : group))
   }, [])
 

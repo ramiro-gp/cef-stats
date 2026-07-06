@@ -24,9 +24,10 @@ interface CreateMatchValues {
 const NO_GROUP_VALUE = '__no_group__'
 
 export function MatchCreateSheet({ groups, defaultGroupId = '', onCreate, onClose }: { groups?: Group[]; defaultGroupId?: string; onCreate: (values: CreateMatchValues) => Match | Promise<Match>; onClose: () => void }) {
+  const defaultGroup = groups?.find(group => group.id === defaultGroupId)
   const [title, setTitle] = useState('Partido de hoy')
   const [scheduledAt, setScheduledAt] = useState(localDateTime)
-  const [format, setFormat] = useState<MatchFormat>('F5')
+  const [format, setFormat] = useState<MatchFormat>(defaultGroup?.defaultFootballFormat ?? 'F5')
   const [groupId, setGroupId] = useState(defaultGroupId)
   const [initialTeamNames] = useState(matchTeamNamePreferencesRepository.load)
   const [lightTeamName, setLightTeamName] = useState(initialTeamNames.light)
@@ -55,7 +56,7 @@ export function MatchCreateSheet({ groups, defaultGroupId = '', onCreate, onClos
   }
 
   return <ModalSheet title="+ Partido" onClose={onClose}>
-    {groups && <label className="mb-4 block"><span className="text-xs font-bold text-slate-500">Grupo anfitrión</span><select value={groupId} onChange={event => setGroupId(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí una opción</option><option value={NO_GROUP_VALUE}>Sin grupo</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select><span className="mt-2 block text-[11px] leading-5 text-slate-400">Usá Sin grupo para partidos mezclados. El link suma participantes al partido, no a un grupo.</span></label>}
+    {groups && <label className="mb-4 block"><span className="text-xs font-bold text-slate-500">Grupo anfitrión</span><select value={groupId} onChange={event => { const nextGroupId = event.target.value; setGroupId(nextGroupId); const selectedGroup = groups.find(group => group.id === nextGroupId); if (selectedGroup?.defaultFootballFormat) setFormat(selectedGroup.defaultFootballFormat) }} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-3 font-bold outline-none focus:border-emerald-500 dark:border-white/10 dark:bg-[#102019]"><option value="">Elegí una opción</option><option value={NO_GROUP_VALUE}>Sin grupo</option>{groups.map(group => <option key={group.id} value={group.id}>{group.name}</option>)}</select><span className="mt-2 block text-[11px] leading-5 text-slate-400">Usá Sin grupo para partidos mezclados. El link suma participantes al partido, no a un grupo.</span></label>}
     <label className="block"><span className="text-xs font-bold text-slate-500">Nombre opcional</span><input value={title} onChange={event => setTitle(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
     <label className="mt-4 block"><span className="text-xs font-bold text-slate-500">Fecha y horario</span><input type="datetime-local" step="900" value={scheduledAt} onChange={event => setScheduledAt(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /><span className="mt-1 block text-[11px] text-slate-400">Minutos disponibles: 00, 15, 30 o 45.</span></label>
     <div className="mt-4"><span className="text-xs font-bold text-slate-500">Formato</span><div className="mt-2 grid grid-cols-5 gap-2">{formats.map(item => <button key={item} onClick={() => setFormat(item)} className={`min-h-11 rounded-xl text-xs font-bold ${format === item ? 'bg-emerald-500 text-ink' : 'border border-slate-200 dark:border-white/10'}`}>{item}</button>)}</div></div>

@@ -51,6 +51,8 @@ export interface Group {
   memberCount: number
   gamesCount: number
   emoji: string
+  defaultMatchType?: StatMatchType
+  defaultFootballFormat?: StatFootballFormat
   spicyMode: boolean
   seeded: boolean
 }
@@ -85,6 +87,7 @@ export interface StatEntry {
   matchType?: StatMatchType
   footballFormat?: StatFootballFormat
   playedPosition?: PlayerPosition
+  deletedGroupName?: string
 }
 
 export interface MatchParticipant {
