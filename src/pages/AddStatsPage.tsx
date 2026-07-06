@@ -33,11 +33,13 @@ interface Props {
   groups: Group[]
   entries: StatEntry[]
   user: User
+  onAttendMatch?: (matchId: string) => Match | void | Promise<Match | void>
+  onOmitMatch?: (matchId: string) => Match | void | Promise<Match | void>
   defaultContextId?: string
   personalContextId?: string
 }
 
-export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, entries, user, defaultContextId = '', personalContextId = '' }: Props) {
+export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, entries, user, onAttendMatch, onOmitMatch, defaultContextId = '', personalContextId = '' }: Props) {
   const defaultContextGroup = groups.find(group => group.id === defaultContextId)
   const initialMatchType = defaultContextGroup?.defaultMatchType ?? (user.defaultMatchType === 'ask' ? 'friendly' : user.defaultMatchType)
   const initialFormat = defaultContextGroup?.defaultFootballFormat ?? (user.defaultFootballFormat === 'ask' ? 'F5' : user.defaultFootballFormat)
@@ -48,6 +50,7 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
   const [linking, setLinking] = useState(false)
   const [linked, setLinked] = useState<MatchLinkSelection | null>(null)
   const [saving, setSaving] = useState(false)
+  const [pendingMatchAction, setPendingMatchAction] = useState('')
   const [error, setError] = useState('')
   const [contextId, setContextId] = useState(defaultContextId)
   const [matchType, setMatchType] = useState<StatMatchType>(initialMatchType)
@@ -58,7 +61,10 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
   const positionRelevant = matchType === 'tournament' || footballFormat === 'F8' || footballFormat === 'F11'
   const matchTypeLabel = matchType === 'tournament' ? 'Torneo' : 'Amistoso'
   const pendingMatches = matches
-    .filter(match => !match.omittedByCurrentUser && !entries.some(entry => entry.userId === user.id && entry.matchId === match.id))
+    .filter(match => {
+      const matchesContext = contextId === personalContextId ? !match.groupId : Boolean(contextId) && match.groupId === contextId
+      return matchesContext && !match.omittedByCurrentUser && !entries.some(entry => entry.userId === user.id && entry.matchId === match.id)
+    })
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
   const selectMatchShortcut = (match: Match) => {
     const participant = match.participants.find(item => item.userId === user.id)
@@ -70,6 +76,38 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
     const matchGroup = groups.find(group => group.id === match.groupId)
     if (matchGroup?.defaultMatchType) setMatchType(matchGroup.defaultMatchType)
     if (formatOptions.includes(match.format as StatFootballFormat)) setFootballFormat(match.format as StatFootballFormat)
+  }
+  const attendShortcut = async (match: Match) => {
+    if (!onAttendMatch || pendingMatchAction) return
+    setPendingMatchAction(`attend-${match.id}`)
+    setError('')
+    try {
+      const updated = await onAttendMatch(match.id)
+      selectMatchShortcut(updated ?? match)
+      onNotify(`Te anotaste en ${match.title}.`)
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'No pudimos anotarte en el partido.'
+      setError(message)
+      onNotify(message, 'error')
+    } finally {
+      setPendingMatchAction('')
+    }
+  }
+  const omitShortcut = async (match: Match) => {
+    if (!onOmitMatch || pendingMatchAction) return
+    setPendingMatchAction(`omit-${match.id}`)
+    setError('')
+    try {
+      await onOmitMatch(match.id)
+      if (linked?.match.id === match.id) setLinked(null)
+      onNotify(`Omitiste ${match.title}.`)
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : 'No pudimos omitir el partido.'
+      setError(message)
+      onNotify(message, 'error')
+    } finally {
+      setPendingMatchAction('')
+    }
   }
 
   const save = async () => {
@@ -101,16 +139,19 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
       </section>
 
       {pendingMatches.length > 0 && <section className="rounded-2xl border border-emerald-500/20 bg-white p-4 dark:border-white/10 dark:bg-white/[0.04]">
-        <div className="mb-3"><h2 className="text-sm font-extrabold">Partidos pendientes de cargar</h2><p className="mt-1 text-xs leading-5 text-slate-400">Elegí uno y tus números quedan vinculados automáticamente. Los omitidos no aparecen acá.</p></div>
+        <div className="mb-3"><h2 className="text-sm font-extrabold">Partidos pendientes de cargar</h2><p className="mt-1 text-xs leading-5 text-slate-400">Mostramos los partidos del contexto elegido arriba. Podés unirte, omitir o elegir uno para cargar stats.</p></div>
         <div className="space-y-2">{pendingMatches.slice(0, 5).map(match => {
           const participant = match.participants.find(item => item.userId === user.id)
           const teamName = participant?.team ? participant.team === 'light' ? match.lightTeamName : match.darkTeamName : participant ? 'Sin equipo todavía' : 'Todavía no decidiste'
-          return <button key={match.id} type="button" onClick={() => selectMatchShortcut(match)} className={`w-full rounded-2xl border p-3 text-left transition ${linked?.match.id === match.id ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-emerald-500/40 dark:border-white/10'}`}>
-            <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black">{match.title}</p><p className="mt-1 text-xs text-slate-400">{new Date(match.scheduledAt).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {match.groupId ? match.groupName ?? groups.find(group => group.id === match.groupId)?.name ?? 'Grupo' : 'Sin grupo'}</p></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{teamName}</span></div>
-          </button>
+          const undecided = !participant
+          return <article key={match.id} className={`rounded-2xl border p-3 transition ${linked?.match.id === match.id ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500' : 'border-slate-200 hover:border-emerald-500/40 dark:border-white/10'}`}>
+            <button type="button" onClick={() => selectMatchShortcut(match)} className="w-full text-left">
+              <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black">{match.title}</p><p className="mt-1 text-xs text-slate-400">{new Date(match.scheduledAt).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {match.groupId ? match.groupName ?? groups.find(group => group.id === match.groupId)?.name ?? 'Grupo' : 'Sin grupo'}</p></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{teamName}</span></div>
+            </button>
+            {undecided && onAttendMatch && onOmitMatch && <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => void attendShortcut(match)} disabled={Boolean(pendingMatchAction)} className="min-h-10 rounded-xl bg-emerald-500 text-xs font-black text-ink disabled:opacity-50">{pendingMatchAction === `attend-${match.id}` ? 'ANOTANDO...' : 'UNIRME'}</button><button type="button" onClick={() => void omitShortcut(match)} disabled={Boolean(pendingMatchAction)} className="min-h-10 rounded-xl border border-slate-200 text-xs font-black text-slate-500 disabled:opacity-50 dark:border-white/10">{pendingMatchAction === `omit-${match.id}` ? 'OMITIENDO...' : 'OMITIR'}</button></div>}
+          </article>
         })}</div>
       </section>}
-
       <section data-tour="add-result">
         <div className="mb-3 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-emerald-500 text-xs font-black text-ink">1</span><h2 className="text-sm font-bold">Resultado <span className="text-emerald-500">*</span></h2></div>
         <div className="grid grid-cols-3 gap-2.5">{resultOptions.map(option => <button type="button" key={option.value} disabled={Boolean(linked?.automaticResult)} onClick={() => setResult(option.value)} className={`relative min-h-24 rounded-2xl border p-3 text-center transition active:scale-[.97] disabled:cursor-default ${result === option.value ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500' : 'border-slate-200 bg-white hover:border-emerald-500/40 dark:border-white/10 dark:bg-white/[0.04]'}`}>{result === option.value && <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-emerald-500 text-ink"><CheckIcon className="h-3.5 w-3.5 stroke-[3]" /></span>}<span className="block text-2xl">{option.emoji}</span><span className="mt-2 block text-sm font-bold">{option.label}</span></button>)}</div>
