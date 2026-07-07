@@ -13,7 +13,8 @@ function currentWorldCupPhrase(user: User, state: PersonalWorldCupState): string
 
 function mockWorldCupPhrase(player: RankingPlayer): string {
   if (player.worldCupsWon > 0) return `${player.name} ganó ${player.worldCupsWon} Mundial${player.worldCupsWon === 1 ? '' : 'es'} Personal${player.worldCupsWon === 1 ? '' : 'es'}.`
-  if (player.worldCupStage === 'group') return `${player.name} está buscando su pase a octavos.`
+  if (player.worldCupStage === 'group' || player.worldCupStage === 'roundOf16') return `${player.name} suma partidos en su Mundial Personal.`
+  if (player.worldCupStage === 'quarterFinal') return `${player.name} está buscando su pase a semis.`
   return `${player.name} está en ${worldCupStageLabels[player.worldCupStage].toLowerCase()} de su Mundial Personal.`
 }
 
@@ -36,7 +37,10 @@ export function buildGroupBannerMessages(group: Group, players: RankingPlayer[],
     const latestMatch = [...matches].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0]
     if (!latestMatch) return [personalScope ? 'Mi historial todavía no tiene stats. Cargá tu primer partido cuando quieras.' : `${group.name} todavía no tiene stats. Cargá el primer partido para abrir la conversación.`]
     const messages = [`${latestMatch.title} ${latestMatch.score ? `terminó Claro ${latestMatch.score.light} - ${latestMatch.score.dark} Oscuro` : 'está abierto. Sumate desde Partidos'}.`]
-    if (latestMatch.mvpParticipantId) { const mvp = latestMatch.participants.find(participant => participant.id === latestMatch.mvpParticipantId); messages.push(`${mvp?.type === 'guest' ? mvp.guestName : mvp?.userId === user.id ? user.name : 'Un jugador'} fue MVP de ${latestMatch.title}.`) }
+    if (latestMatch.mvpParticipantId) {
+      const mvp = latestMatch.participants.find(participant => participant.id === latestMatch.mvpParticipantId)
+      messages.push(`${mvp?.type === 'guest' ? mvp.guestName : mvp?.userId === user.id ? user.name : 'Un jugador'} fue MVP de ${latestMatch.title}.`)
+    }
     const guestCount = latestMatch.participants.filter(participant => participant.type === 'guest').length
     if (guestCount) messages.push(`${guestCount} ${guestCount === 1 ? 'invitado completa' : 'invitados completan'} ${latestMatch.title}.`)
     if (latestMatch.guestStats.length) messages.push(`${latestMatch.guestStats.length} ${latestMatch.guestStats.length === 1 ? 'invitado ya cargó' : 'invitados ya cargaron'} sus stats.`)
@@ -60,14 +64,17 @@ export function buildGroupBannerMessages(group: Group, players: RankingPlayer[],
   const latestMatch = [...matches].sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0]
   if (latestMatch?.score) candidates.push({ subject: latestMatch.id, type: 'system', text: `${latestMatch.title}: Claro ${latestMatch.score.light} - ${latestMatch.score.dark} Oscuro.` })
   else if (latestMatch) candidates.push({ subject: latestMatch.id, type: 'system', text: `${latestMatch.title} está abierto. Sumate desde Partidos.` })
-  if (latestMatch?.mvpParticipantId) { const mvp = latestMatch.participants.find(participant => participant.id === latestMatch.mvpParticipantId); candidates.push({ subject: latestMatch.mvpParticipantId, type: 'ranking', text: `${mvp?.type === 'guest' ? mvp.guestName : mvp?.userId === user.id ? user.name : 'Un jugador'} fue MVP de ${latestMatch.title}.` }) }
+  if (latestMatch?.mvpParticipantId) {
+    const mvp = latestMatch.participants.find(participant => participant.id === latestMatch.mvpParticipantId)
+    candidates.push({ subject: latestMatch.mvpParticipantId, type: 'ranking', text: `${mvp?.type === 'guest' ? mvp.guestName : mvp?.userId === user.id ? user.name : 'Un jugador'} fue MVP de ${latestMatch.title}.` })
+  }
   if (latestMatch) {
     const guests = latestMatch.participants.filter(participant => participant.type === 'guest')
     if (guests.length) candidates.push({ subject: latestMatch.id, type: 'stats', text: `${guests.length} ${guests.length === 1 ? 'invitado completa' : 'invitados completan'} ${latestMatch.title}.` })
     const loadedStats = entries.filter(entry => entry.matchId === latestMatch.id).length + latestMatch.guestStats.length
     if (loadedStats) candidates.push({ subject: latestMatch.id, type: 'stats', text: `${loadedStats} ${loadedStats === 1 ? 'jugador ya cargó' : 'jugadores ya cargaron'} stats en ${latestMatch.title}.` })
   }
-  candidates.push({ subject: group.id, type: 'system', text: personalScope ? 'Mi historial guarda tus números aunque todavía no tengas grupo.' : `${group.name}: la tabla está más apretada de lo que algunos admiten.` })
+  candidates.push({ subject: group.id, type: 'system', text: personalScope ? 'Mi historial guarda tus números aunque todavía no tengas grupo.' : `${group.name}: cada carga mueve la pelea por el ranking.` })
 
   const paidFunny = getRarePaidBannerMessage({
     players,

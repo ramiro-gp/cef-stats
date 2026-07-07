@@ -10,8 +10,8 @@ export const currentReleaseNotes: ReleaseNotes = {
   version: packageInfo.version,
   title: 'Últimos cambios',
   notes: [
-    'Mejoramos movimientos recientes en grupos.',
-    'Sacamos eventos poco importantes del feed.',
-    'El aviso de partido disponible en Home quedó más claro.',
+    'Home muestra varios partidos disponibles del grupo.',
+    'Podés unirte u omitir partidos desde Inicio.',
+    'Limpiamos frases flojas del banner rotativo.',
   ],
 }
