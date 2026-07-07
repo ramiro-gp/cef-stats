@@ -154,4 +154,11 @@ export const authRepository = {
     const response = await client.auth.updateUser({ password })
     return response.error ? { error: authErrorMessage(response.error) } : {}
   },
+  async getPublicUserCount(): Promise<number | null> {
+    const { client } = requireClient()
+    if (!client) return null
+    const response = await client.from('profiles').select('id', { count: 'exact', head: true })
+    if (response.error) return null
+    return response.count ?? null
+  },
 }
