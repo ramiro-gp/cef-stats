@@ -25,10 +25,11 @@ interface Props {
   onTheme: () => void
   onSelectGroup: (group: Group) => void
   onNavigate: (page: Page) => void
+  onVersionClick?: () => void
   children: React.ReactNode
 }
 
-export function AppShell({ page, user, group, groups, theme, onTheme, onSelectGroup, onNavigate, children }: Props) {
+export function AppShell({ page, user, group, groups, theme, onTheme, onSelectGroup, onNavigate, onVersionClick, children }: Props) {
   const personalScope = group ? isPersonalScope(group) : false
   const allScope = group ? isAllScope(group) : false
   const nextTheme = theme === 'light' ? 'Oscuro' : theme === 'dark' ? 'AMOLED' : 'Claro'
@@ -44,7 +45,7 @@ export function AppShell({ page, user, group, groups, theme, onTheme, onSelectGr
         <div className="mt-1 font-bold">{group?.name ?? 'Sin grupo activo'}</div>
         {group && <div className="mt-1 text-xs text-slate-400">{allScope ? 'Vista combinada · Sólo lectura' : personalScope ? 'Stats personales' : `${group.memberCount} jugadores · ${group.gamesCount} partidos`}</div>}
       </div>
-      <p className="mt-3 text-center text-[10px] font-medium tracking-wide text-slate-400 dark:text-slate-500">{appVersion}</p>
+      <button type="button" onClick={onVersionClick} className="mt-3 w-full text-center text-[10px] font-medium tracking-wide text-slate-400 underline-offset-2 hover:text-emerald-500 hover:underline dark:text-slate-500">{appVersion}</button>
     </aside>
 
     <div className="lg:pl-64">
@@ -58,7 +59,7 @@ export function AppShell({ page, user, group, groups, theme, onTheme, onSelectGr
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">{children}<p className="mt-10 text-center text-[10px] font-medium tracking-wide text-slate-400 dark:text-slate-500 lg:hidden">{appVersion}</p></main>
+      <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 lg:px-8 lg:pb-12 lg:pt-8">{children}<button type="button" onClick={onVersionClick} className="mt-10 w-full text-center text-[10px] font-medium tracking-wide text-slate-400 underline-offset-2 hover:text-emerald-500 hover:underline dark:text-slate-500 lg:hidden">{appVersion}</button></main>
     </div>
     <BottomNav page={page} onNavigate={onNavigate} />
   </div>

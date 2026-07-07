@@ -1,0 +1,10 @@
+{
+  "version": "0.31.0",
+  "title": "Últimos cambios",
+  "notes": [
+    "La carga de stats ahora deja resolver partidos más rápido.",
+    "Podés unirte a un equipo u omitir partidos desde la carga.",
+    "Los grupos pueden tener formato y tipo de partido por defecto.",
+    "Mejoramos detalles visuales para que entre mejor en celular."
+  ]
+}

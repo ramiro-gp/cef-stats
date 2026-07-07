@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, Route, Routes, matchPath, useLocation, useNavigate } from 'react-router-dom'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 import { AppShell } from './components/AppShell'
 import { useLocalStore } from './store/useLocalStore'
 import { LoginPage } from './pages/LoginPage'
@@ -25,10 +26,12 @@ import { supabaseRepository } from './data/supabaseRepository'
 import { inviteCodesEqual } from './utils/inviteCodes'
 import { AppToast, type ToastMessage } from './components/AppToast'
 import { PwaUpdatePrompt } from './components/PwaUpdatePrompt'
+import { ReleaseNotesModal } from './components/ReleaseNotesModal'
 import { usePwaInstall } from './hooks/usePwaInstall'
 import { ProductTour } from './components/ProductTour'
 import { hasSeenInitialTour, markInitialTourSeen, type ProductTourId } from './config/productTours'
 import type { UndoableActionOptions } from './utils/criticalActions'
+import { currentReleaseNotes, type ReleaseNotes } from './config/releaseNotes'
 
 const AddStatsPage = lazy(() => import('./pages/AddStatsPage').then(module => ({ default: module.AddStatsPage })))
 const GroupsPage = lazy(() => import('./pages/GroupsPage').then(module => ({ default: module.GroupsPage })))
@@ -39,6 +42,18 @@ const MatchesPage = lazy(() => import('./pages/MatchesPage').then(module => ({ d
 
 function PageLoading() {
   return <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando pantalla...</div>
+}
+
+function isVersionNewer(candidate: string, current: string): boolean {
+  const nextParts = candidate.split('.').map(part => Number(part) || 0)
+  const currentParts = current.split('.').map(part => Number(part) || 0)
+  for (let index = 0; index < Math.max(nextParts.length, currentParts.length); index += 1) {
+    const next = nextParts[index] ?? 0
+    const actual = currentParts[index] ?? 0
+    if (next > actual) return true
+    if (next < actual) return false
+  }
+  return false
 }
 
 function mergeAuthProfile(profile: AuthProfile, localUser: User): User {
@@ -67,6 +82,9 @@ export default function App() {
   const [pendingMatchCode, setPendingMatchCode] = useState(initialMatchInviteCode)
   const [activeTour, setActiveTour] = useState<ProductTourId | null>(null)
   const [toast, setToast] = useState<ToastMessage | null>(null)
+  const [releaseNotesOpen, setReleaseNotesOpen] = useState(false)
+  const [latestRelease, setLatestRelease] = useState<ReleaseNotes | null>(null)
+  const [checkingRelease, setCheckingRelease] = useState(false)
   const attemptedGroupCode = useRef('')
   const store = useLocalStore()
   const auth = useAuth()
@@ -88,6 +106,7 @@ export default function App() {
   const profileHistory = useSupabaseProfileHistory(accountMode ? auth.user!.id : null)
   const remoteMatchGroupId = accountMode ? remoteGroups.activeSharedGroup?.id ?? null : null
   const remoteMatches = useSupabaseMatches(accountMode ? auth.user!.id : null, remoteMatchGroupId)
+  const { needRefresh: [needRefresh, setNeedRefresh], updateServiceWorker } = useRegisterSW()
 
   const navigate = (next: Page) => {
     routerNavigate(pagePaths[next])
@@ -95,6 +114,32 @@ export default function App() {
   }
   const notify = useCallback((text: string, tone: ToastMessage['tone'] = 'success') => setToast({ id: Date.now(), text, tone }), [])
   const closeToast = useCallback(() => setToast(null), [])
+  const fetchLatestRelease = useCallback(async () => {
+    try {
+      const response = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error('No pudimos leer la versión publicada.')
+      const data = await response.json() as ReleaseNotes
+      if (data?.version) setLatestRelease(data)
+      return data
+    } catch {
+      setLatestRelease(currentReleaseNotes)
+      return currentReleaseNotes
+    }
+  }, [])
+  const checkForUpdates = useCallback(async () => {
+    setCheckingRelease(true)
+    try {
+      const latest = await fetchLatestRelease()
+      const registration = await navigator.serviceWorker?.getRegistration?.()
+      await registration?.update()
+      if (isVersionNewer(latest.version, currentReleaseNotes.version)) notify(`Hay una nueva versión más reciente (v${latest.version}).`)
+      else notify('Ya tenés la última versión.')
+    } catch (reason) {
+      notify(reason instanceof Error ? reason.message : 'No pudimos chequear la versión.', 'error')
+    } finally {
+      setCheckingRelease(false)
+    }
+  }, [fetchLatestRelease, notify])
   const scheduleUndoableAction = useCallback((options: UndoableActionOptions) => {
     const id = Date.now()
     let undone = false
@@ -364,10 +409,13 @@ export default function App() {
     <Route path="*" element={<NotFoundPage onHome={() => navigate('home')} onMatches={() => navigate('matches')} />} />
   </Routes>
 
-  return <AppShell page={activePage} user={currentUser} group={group} groups={groups} theme={theme} onTheme={cycleTheme} onSelectGroup={selectGroup} onNavigate={navigate}>
+  const releaseUpdateAvailable = needRefresh || Boolean(latestRelease && isVersionNewer(latestRelease.version, currentReleaseNotes.version))
+
+  return <AppShell page={activePage} user={currentUser} group={group} groups={groups} theme={theme} onTheme={cycleTheme} onSelectGroup={selectGroup} onNavigate={navigate} onVersionClick={() => { setReleaseNotesOpen(true); void fetchLatestRelease() }}>
     {activePage && accountMode && remoteStats.loading ? <div className="rounded-2xl border border-slate-200 p-6 text-center text-sm text-slate-400 dark:border-white/10">Cargando stats...</div> : <>{accountMode && remoteStats.error && activePage !== 'profile' && <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm font-semibold text-rose-500">{remoteStats.error}</div>}<Suspense fallback={<PageLoading />}>{routedContent}</Suspense></>}
     {activeTour && <ProductTour tourId={activeTour} activePage={activePage} onNavigate={navigate} onClose={closeTour} />}
     {toast && <AppToast message={toast} onClose={closeToast} />}
-    <PwaUpdatePrompt />
+    <PwaUpdatePrompt needRefresh={needRefresh} latest={latestRelease} onLater={() => setNeedRefresh(false)} onUpdate={() => updateServiceWorker(true)} onReadNotes={() => { setReleaseNotesOpen(true); void fetchLatestRelease() }} />
+    {releaseNotesOpen && <ReleaseNotesModal updateAvailable={releaseUpdateAvailable} latest={latestRelease} checking={checkingRelease} onCheck={checkForUpdates} onUpdate={() => updateServiceWorker(true)} onClose={() => setReleaseNotesOpen(false)} />}
   </AppShell>
 }
