@@ -44,6 +44,7 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
   const [kicking, setKicking] = useState<string | null>(null)
   const [deleteGroupName, setDeleteGroupName] = useState('')
   const [deletingGroup, setDeletingGroup] = useState(false)
+  const [dangerOpen, setDangerOpen] = useState(false)
   const [memberFeedback, setMemberFeedback] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const currentMembership = currentGroup ? memberships.find(member => member.groupId === currentGroup.id && member.userId === currentUserId) : undefined
   const canEditGroup = (groupId: string) => !remoteMode || memberships.some(member => member.groupId === groupId && member.userId === currentUserId && member.role === 'owner')
@@ -55,7 +56,7 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
     return true
   }
 
-  const open = (nextMode: typeof mode, group?: Group) => { setMode(nextMode); setEditing(group ?? null); setValue(group?.name ?? ''); setEmoji(group?.emoji || defaultGroupEmoji); setDefaultMatchType(group?.defaultMatchType ?? 'friendly'); setDefaultFootballFormat(group?.defaultFootballFormat ?? 'F5'); setDeleteGroupName(''); setError('') }
+  const open = (nextMode: typeof mode, group?: Group) => { setMode(nextMode); setEditing(group ?? null); setValue(group?.name ?? ''); setEmoji(group?.emoji || defaultGroupEmoji); setDefaultMatchType(group?.defaultMatchType ?? 'friendly'); setDefaultFootballFormat(group?.defaultFootballFormat ?? 'F5'); setDeleteGroupName(''); setDangerOpen(false); setError('') }
   const copy = (group: Group) => {
     void navigator.clipboard?.writeText(createGroupInviteLink(group.code, window.location.origin))
     setCopied(group.id)
@@ -138,11 +139,12 @@ export function GroupsPage({ groups, currentGroup, members = [], memberships = [
           <h3 className="font-extrabold">Gestionar grupos</h3><p className="mt-1 text-sm leading-6 text-slate-400">{remoteMode ? 'Membresías guardadas en Supabase.' : 'Todo queda guardado localmente.'}</p>
           <div className="mt-5 space-y-2.5"><button onClick={() => open('create')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 font-bold text-ink"><PlusCircleIcon className="h-5 w-5"/> Crear grupo {remoteMode ? '' : 'local'}</button><button onClick={() => open('join')} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 font-bold dark:border-white/10"><UsersIcon className="h-5 w-5" /> Unirme con código</button></div>
           {currentGroup && <div className="mt-6 rounded-xl bg-slate-100 p-3 dark:bg-white/5"><p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Grupo activo</p><p className="mt-1 font-bold">{currentGroup.name}</p><p className="mt-1 font-mono text-xs text-emerald-500">{currentGroup.code}</p></div>}
-          {canDeleteCurrentGroup && currentGroup && <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
+          {canDeleteCurrentGroup && currentGroup && !dangerOpen && <button type="button" onClick={() => setDangerOpen(true)} className="mt-4 min-h-11 w-full rounded-xl border border-rose-500/30 text-sm font-bold text-rose-500 transition hover:bg-rose-500/10">Eliminar grupo</button>}
+          {canDeleteCurrentGroup && currentGroup && dangerOpen && <div className="mt-4 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3">
             <p className="text-xs font-extrabold text-rose-500">Zona de peligro</p>
             <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-300">Eliminar el grupo borra sus membresías y partidos, pero conserva las cargas como historial personal con la etiqueta del grupo eliminado.</p>
             <label className="mt-3 block"><span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">Escribí “{currentGroup.name}” para confirmar</span><input value={deleteGroupName} onChange={event => setDeleteGroupName(event.target.value)} disabled={deletingGroup} className="mt-2 h-10 w-full rounded-xl border border-rose-500/30 bg-transparent px-3 text-xs font-bold outline-none focus:border-rose-500 disabled:opacity-50" /></label>
-            <button type="button" onClick={() => void deleteCurrentGroup()} disabled={deletingGroup || deleteGroupName !== currentGroup.name} className="mt-3 min-h-10 w-full rounded-xl border border-rose-500/30 text-xs font-bold text-rose-500 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50">{deletingGroup ? 'Eliminando...' : 'Eliminar grupo definitivamente'}</button>
+            <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => { setDangerOpen(false); setDeleteGroupName('') }} disabled={deletingGroup} className="min-h-10 rounded-xl border border-slate-200 text-xs font-bold disabled:opacity-50 dark:border-white/10">Cancelar</button><button type="button" onClick={() => void deleteCurrentGroup()} disabled={deletingGroup || deleteGroupName !== currentGroup.name} className="min-h-10 rounded-xl border border-rose-500/30 text-xs font-bold text-rose-500 transition hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-50">{deletingGroup ? 'Eliminando...' : 'Eliminar definitivo'}</button></div>
           </div>}
         </> : <>
           <button onClick={() => open('list')} disabled={submitting} className="mb-4 min-h-10 text-xs font-bold text-emerald-500 disabled:opacity-50">← Volver</button>

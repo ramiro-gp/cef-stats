@@ -1,5 +1,5 @@
 import { supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
-import type { Match, MatchComment, MatchFormat, MatchMvpVote, MatchParticipant, MatchScore, MatchTeam } from '../types'
+import type { Match, MatchComment, MatchFormat, MatchMvpVote, MatchParticipant, MatchScore, MatchTeam, StatMatchType } from '../types'
 import { extractInviteCode, isValidMatchCode } from '../utils/matches'
 
 interface MatchRow {
@@ -9,6 +9,7 @@ interface MatchRow {
   light_team_name: string
   dark_team_name: string
   format: MatchFormat
+  match_type: StatMatchType | null
   invite_code: string
   scheduled_at: string
   created_by: string
@@ -76,7 +77,7 @@ interface MatchOmissionRow {
   match_id: string
 }
 
-const matchColumns = 'id,host_group_id,title,light_team_name,dark_team_name,format,invite_code,scheduled_at,created_by,status,light_score,dark_score,mvp_user_id,mvp_guest_id,created_at,updated_at'
+const matchColumns = 'id,host_group_id,title,light_team_name,dark_team_name,format,match_type,invite_code,scheduled_at,created_by,status,light_score,dark_score,mvp_user_id,mvp_guest_id,created_at,updated_at'
 
 function client() {
   if (!supabase) throw new Error(SUPABASE_NOT_CONFIGURED_MESSAGE)
@@ -92,6 +93,7 @@ function matchError(message: string): string {
   if ((normalized.includes('match_omissions') || normalized.includes('omit_match') || normalized.includes('attend_match')) && (normalized.includes('does not exist') || normalized.includes('schema cache') || normalized.includes('could not find'))) return 'Falta ejecutar supabase/patches/018_match_omissions_and_attendance.sql.'
   if (normalized.includes('host_group_id') && normalized.includes('not-null')) return 'Falta ejecutar supabase/patches/012_allow_matches_without_group.sql.'
   if ((normalized.includes('light_team_name') || normalized.includes('set_match_participant_team')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/014_add_match_team_names_and_admin_team_assignment.sql.'
+  if (normalized.includes('match_type') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/020_add_match_type_and_edit_matches.sql.'
   if (normalized.includes('only match creator')) return 'Sólo quien creó el partido puede cambiar equipos ajenos.'
   if (normalized.includes('team is full')) return 'Ese equipo ya está completo.'
   if (normalized.includes('matches') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/003_add_matches.sql.'
@@ -171,6 +173,7 @@ async function hydrateMatches(rows: MatchRow[]): Promise<Match[]> {
       lightTeamName: row.light_team_name || 'CLARO',
       darkTeamName: row.dark_team_name || 'OSCURO',
       format: row.format,
+      matchType: row.match_type ?? 'friendly',
       scheduledAt: row.scheduled_at,
       createdByUserId: row.created_by,
       inviteCode: row.invite_code,
@@ -245,12 +248,18 @@ export const supabaseMatchRepository = {
     return this.getMatch(result.data as string)
   },
 
-  async createMatch(groupId: string | null, values: { title: string; scheduledAt: string; format?: MatchFormat; lightTeamName: string; darkTeamName: string }): Promise<Match> {
-    const result = await client().rpc('create_match_with_invite', { p_host_group_id: groupId, p_title: values.title.trim(), p_format: values.format ?? 'F5', p_scheduled_at: values.scheduledAt, p_light_team_name: values.lightTeamName, p_dark_team_name: values.darkTeamName })
+  async createMatch(groupId: string | null, values: { title: string; scheduledAt: string; format?: MatchFormat; matchType?: StatMatchType; lightTeamName: string; darkTeamName: string }): Promise<Match> {
+    const result = await client().rpc('create_match_with_invite', { p_host_group_id: groupId, p_title: values.title.trim(), p_format: values.format ?? 'F5', p_scheduled_at: values.scheduledAt, p_light_team_name: values.lightTeamName, p_dark_team_name: values.darkTeamName, p_match_type: values.matchType ?? 'friendly' })
     if (result.error) throw new Error(matchError(result.error.message))
     const row = (Array.isArray(result.data) ? result.data[0] : result.data) as MatchRow | undefined
     if (!row) throw new Error('Supabase no devolvió el partido creado.')
     return oneMatch(row)
+  },
+
+  async updateMatch(matchId: string, values: { title: string; scheduledAt: string; format: MatchFormat; matchType: StatMatchType; lightTeamName: string; darkTeamName: string }): Promise<Match> {
+    const result = await client().from('matches').update({ title: values.title.trim(), scheduled_at: values.scheduledAt, format: values.format, match_type: values.matchType, light_team_name: values.lightTeamName.trim().toUpperCase(), dark_team_name: values.darkTeamName.trim().toUpperCase() }).eq('id', matchId).select(matchColumns).single<MatchRow>()
+    if (result.error) throw new Error(matchError(result.error.message))
+    return oneMatch(result.data)
   },
 
   async joinTeam(inviteCode: string, team: MatchTeam): Promise<Match> {

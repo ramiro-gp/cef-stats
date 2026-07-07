@@ -145,6 +145,7 @@ export interface Match {
   lightTeamName: string
   darkTeamName: string
   format?: MatchFormat
+  matchType?: StatMatchType
   scheduledAt: string
   createdByUserId: string
   inviteCode: string

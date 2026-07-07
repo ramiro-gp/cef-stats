@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabaseMatchRepository } from '../data/supabaseMatchRepository'
 import { supabaseRepository } from '../data/supabaseRepository'
-import type { Match, MatchFormat, MatchScore, MatchTeam, StatEntry } from '../types'
+import type { Match, MatchFormat, MatchScore, MatchTeam, StatEntry, StatMatchType } from '../types'
 import { getMatchMvpSummary } from '../utils/matches'
 
 export function useSupabaseMatches(userId: string | null, groupId: string | null) {
@@ -70,10 +70,12 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     }
   }, [])
 
-  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat; groupId?: string | null; lightTeamName: string; darkTeamName: string }) => {
+  const createMatch = useCallback((values: { title: string; scheduledAt: string; format?: MatchFormat; matchType?: StatMatchType; groupId?: string | null; lightTeamName: string; darkTeamName: string }) => {
     const targetGroupId = values.groupId === undefined ? groupId : values.groupId
     return mutate(async () => upsert(await supabaseMatchRepository.createMatch(targetGroupId, values)))
   }, [groupId, mutate, upsert])
+
+  const updateMatch = useCallback((matchId: string, values: { title: string; scheduledAt: string; format: MatchFormat; matchType: StatMatchType; lightTeamName: string; darkTeamName: string }) => mutate(async () => upsert(await supabaseMatchRepository.updateMatch(matchId, values))), [mutate, upsert])
 
   const lookupMatch = useCallback((value: string) => mutate(async () => {
     const found = await supabaseMatchRepository.attendByInvite(value)
@@ -159,10 +161,10 @@ export function useSupabaseMatches(userId: string | null, groupId: string | null
     const existing = entries.find(entry => entry.matchId === matchId && entry.userId === userId)
     const saved = existing
       ? await supabaseRepository.updateStatEntry(existing.id, userId, values)
-      : await supabaseRepository.createStatEntry(match.groupId ? { type: 'group', userId, groupId: match.groupId } : { type: 'personal', userId }, { ...values, matchId })
+      : await supabaseRepository.createStatEntry(match.groupId ? { type: 'group', userId, groupId: match.groupId } : { type: 'personal', userId }, { ...values, matchType: values.matchType ?? match.matchType ?? 'friendly', footballFormat: values.footballFormat ?? match.format ?? 'F5', matchId })
     setEntries(current => existing ? current.map(entry => entry.id === saved.id ? saved : entry) : [saved, ...current])
     return saved
   }), [entries, matches, mutate, userId])
 
-  return { matches, entries, loading, saving, error, createMatch, lookupMatch, joinTeam, attendMatch, omitMatch, setParticipantTeam, leaveMatch, saveScore, setMvp, saveComment, deleteComment, addGuest, updateGuest, removeGuest, saveGuestStats, saveStats, reload: load }
+  return { matches, entries, loading, saving, error, createMatch, updateMatch, lookupMatch, joinTeam, attendMatch, omitMatch, setParticipantTeam, leaveMatch, saveScore, setMvp, saveComment, deleteComment, addGuest, updateGuest, removeGuest, saveGuestStats, saveStats, reload: load }
 }

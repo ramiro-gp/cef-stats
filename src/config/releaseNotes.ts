@@ -10,9 +10,9 @@ export const currentReleaseNotes: ReleaseNotes = {
   version: packageInfo.version,
   title: 'Últimos cambios',
   notes: [
-    'La carga de stats ahora deja resolver partidos más rápido.',
-    'Podés unirte a un equipo u omitir partidos desde la carga.',
-    'Los grupos pueden tener formato y tipo de partido por defecto.',
-    'Mejoramos detalles visuales para que entre mejor en celular.',
+    'En perfil podés ver tu email y cambiar contraseña.',
+    'La zona de eliminar grupo queda menos expuesta.',
+    'Los partidos ahora pueden marcarse como Amistoso o Torneo.',
+    'El creador puede editar datos principales del partido.',
   ],
 }

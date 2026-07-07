@@ -6,7 +6,16 @@ import { LoadPreferencesFields } from './LoadPreferencesFields'
 import { avatarOptions } from '../data/avatarOptions'
 import { UserAvatar } from './UserAvatar'
 
-export function ProfileEditor({ user, accountMode = false, onSave, onClose }: { user: User; accountMode?: boolean; onSave: (user: User) => void | string | Promise<void | string>; onClose: () => void }) {
+interface Props {
+  user: User
+  email?: string
+  accountMode?: boolean
+  onSave: (user: User) => void | string | Promise<void | string>
+  onPasswordChange?: (password: string) => void | string | Promise<void | string>
+  onClose: () => void
+}
+
+export function ProfileEditor({ user, email = '', accountMode = false, onSave, onPasswordChange, onClose }: Props) {
   const [name, setName] = useState(user.name)
   const [nickname, setNickname] = useState(user.nickname)
   const [avatar, setAvatar] = useState(user.avatar || user.initials)
@@ -14,13 +23,18 @@ export function ProfileEditor({ user, accountMode = false, onSave, onClose }: { 
   const [position, setPosition] = useState<PlayerPosition | ''>(user.position)
   const [defaultMatchType, setDefaultMatchType] = useState<LoadMatchTypePreference>(user.defaultMatchType)
   const [defaultFootballFormat, setDefaultFootballFormat] = useState<LoadFormatPreference>(user.defaultFootballFormat)
+  const [password, setPassword] = useState('')
+  const [passwordRepeat, setPasswordRepeat] = useState('')
   const [error, setError] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordMessage, setPasswordMessage] = useState('')
   const [saving, setSaving] = useState(false)
+  const [savingPassword, setSavingPassword] = useState(false)
 
   const save = async () => {
     const cleanUsername = normalizeHandle(username)
     if (!name.trim()) { setError('El nombre es obligatorio.'); return }
-    if (!isValidHandle(cleanUsername)) { setError('El @usuario debe tener 3–24 caracteres: letras, números, punto o guion bajo.'); return }
+    if (!isValidHandle(cleanUsername)) { setError('El @usuario debe tener 3-24 caracteres: letras, números, punto o guion bajo.'); return }
     const fallbackInitials = name.trim().split(/\s+/).map(part => part[0]).join('').slice(0, 2).toUpperCase()
     setSaving(true)
     setError('')
@@ -35,9 +49,30 @@ export function ProfileEditor({ user, accountMode = false, onSave, onClose }: { 
     }
   }
 
+  const changePassword = async () => {
+    if (!onPasswordChange) return
+    if (password.length < 6) { setPasswordError('La contraseña debe tener al menos 6 caracteres.'); return }
+    if (password !== passwordRepeat) { setPasswordError('Las contraseñas no coinciden.'); return }
+    setSavingPassword(true)
+    setPasswordError('')
+    setPasswordMessage('')
+    try {
+      const saveError = await onPasswordChange(password)
+      if (saveError) { setPasswordError(saveError); return }
+      setPassword('')
+      setPasswordRepeat('')
+      setPasswordMessage('Contraseña actualizada.')
+    } catch (reason) {
+      setPasswordError(reason instanceof Error ? reason.message : 'No pudimos cambiar la contraseña.')
+    } finally {
+      setSavingPassword(false)
+    }
+  }
+
   return <ModalSheet title="Editar perfil" onClose={onClose}>
     <div className="mb-5 flex items-center gap-4"><UserAvatar value={avatar} fallback={name.trim().slice(0, 2).toUpperCase()} className="h-16 w-16 rounded-2xl text-xl" /><p className="text-sm leading-6 text-slate-400">Elegí un avatar genérico o mantené tus iniciales.</p></div>
     <div className="space-y-4">
+      {accountMode && email && <label className="block"><span className="text-xs font-bold text-slate-500">Email</span><input value={email} readOnly className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-slate-100 px-3 text-slate-500 outline-none dark:border-white/10 dark:bg-white/5 dark:text-slate-300" /></label>}
       <label className="block"><span className="text-xs font-bold text-slate-500">Nombre</span><input value={name} onChange={event => setName(event.target.value)} className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
       {!accountMode && <label className="block"><span className="text-xs font-bold text-slate-500">Apodo opcional</span><input value={nickname} onChange={event => setNickname(event.target.value)} placeholder="Podés configurarlo después" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>}
       <label className="block"><span className="text-xs font-bold text-slate-500">@usuario</span><div className="relative mt-2"><span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400">@</span><input value={username} maxLength={24} onChange={event => setUsername(event.target.value.toLowerCase().replace(/\s/g, '').replace(/[^a-z0-9._]/g, ''))} className="h-12 w-full rounded-xl border border-slate-200 bg-transparent pl-8 pr-3 outline-none focus:border-emerald-500 dark:border-white/10" /></div></label>
@@ -46,5 +81,16 @@ export function ProfileEditor({ user, accountMode = false, onSave, onClose }: { 
     </div>
     {error && <p className="mt-3 text-sm font-semibold text-rose-500">{error}</p>}
     <div className="mt-6 grid grid-cols-2 gap-3"><button onClick={onClose} disabled={saving} className="min-h-12 rounded-xl border border-slate-200 font-bold disabled:opacity-50 dark:border-white/10">Cancelar</button><button onClick={save} disabled={saving} className="min-h-12 rounded-xl bg-emerald-500 font-extrabold text-ink disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button></div>
+    {accountMode && onPasswordChange && <section className="mt-6 rounded-2xl border border-slate-200 p-4 dark:border-white/10">
+      <h3 className="font-extrabold">Cambiar contraseña</h3>
+      <p className="mt-1 text-xs leading-5 text-slate-400">Usá al menos 6 caracteres. El cambio queda en tu cuenta.</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="block"><span className="text-xs font-bold text-slate-500">Nueva contraseña</span><input type="password" value={password} onChange={event => setPassword(event.target.value)} autoComplete="new-password" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
+        <label className="block"><span className="text-xs font-bold text-slate-500">Repetir contraseña</span><input type="password" value={passwordRepeat} onChange={event => setPasswordRepeat(event.target.value)} autoComplete="new-password" className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-transparent px-3 outline-none focus:border-emerald-500 dark:border-white/10" /></label>
+      </div>
+      {passwordError && <p className="mt-3 text-sm font-semibold text-rose-500">{passwordError}</p>}
+      {passwordMessage && <p className="mt-3 text-sm font-semibold text-emerald-500">{passwordMessage}</p>}
+      <button type="button" onClick={() => void changePassword()} disabled={savingPassword || !password || !passwordRepeat} className="mt-4 min-h-11 w-full rounded-xl border border-emerald-500/30 text-sm font-extrabold text-emerald-500 disabled:opacity-50">{savingPassword ? 'Cambiando...' : 'Cambiar contraseña'}</button>
+    </section>}
   </ModalSheet>
 }

@@ -31,7 +31,9 @@ interface Props {
   globalScoringStreakRecord: number
   globalWorldCupsWon: number
   theme: ThemeMode
+  email?: string
   onSaveUser: (user: User) => void | string | Promise<void | string>
+  onPasswordChange?: (password: string) => void | string | Promise<void | string>
   onUpdateEntry: (id: string, values: Pick<StatEntry, 'result' | 'goals' | 'assists'> & { contextId: string; unlinkMatch?: boolean }) => void | Promise<void>
   onDeleteEntry: (id: string) => void | Promise<void>
   onLinkEntry: (entryId: string, matchId: string, team: MatchTeam, result?: MatchResult) => boolean | Promise<boolean>
@@ -56,7 +58,7 @@ interface Props {
   onHistoryPageChange?: (page: number) => void
 }
 
-export function ProfilePage({ user, group, entries, allEntries, matches, groups, personalContextId, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, onSaveUser, onUpdateEntry, onDeleteEntry, onLinkEntry, onNotify, onTheme, onLogout, onOpenMatch, onStartTour, pwaCanInstall, pwaInstalled, onInstallPwa, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
+export function ProfilePage({ user, group, entries, allEntries, matches, groups, personalContextId, totals, worldCup, globalScoringStreakRecord, globalWorldCupsWon, theme, email = '', onSaveUser, onPasswordChange, onUpdateEntry, onDeleteEntry, onLinkEntry, onNotify, onTheme, onLogout, onOpenMatch, onStartTour, pwaCanInstall, pwaInstalled, onInstallPwa, accountMode = false, statsError = '', historyEntries, historyTotal, historyPage, historyPageSize = 20, historyLoading = false, historyError = '', historyFilters, onHistoryFiltersChange, onHistoryPageChange }: Props) {
   const [editingProfile, setEditingProfile] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -147,7 +149,7 @@ export function ProfilePage({ user, group, entries, allEntries, matches, groups,
       </div>
     </div>
     <div className="mt-8 border-t border-slate-200 pt-6 dark:border-white/10">{logoutError && <p className="mb-3 rounded-xl bg-rose-500/10 p-3 text-sm font-semibold text-rose-500">{logoutError}</p>}<button onClick={() => void logout()} disabled={loggingOut} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 py-3.5 text-sm font-bold text-slate-500 transition hover:border-red-400 hover:text-red-500 disabled:opacity-50 dark:border-white/10"><LogoutIcon className="h-4 w-4" /> {loggingOut ? 'Cerrando sesión...' : 'Cerrar sesión'}</button></div>
-    {editingProfile && <ProfileEditor user={user} accountMode={accountMode} onSave={onSaveUser} onClose={() => setEditingProfile(false)} />}
+    {editingProfile && <ProfileEditor user={user} email={email} accountMode={accountMode} onSave={onSaveUser} onPasswordChange={onPasswordChange} onClose={() => setEditingProfile(false)} />}
     {selectedEntry && <StatEntryEditor entry={selectedEntry} groups={groups} personalContextId={personalContextId} linkedMatch={selectedEntry.matchId ? matches.find(match => match.id === selectedEntry.matchId) : undefined} onSave={values => onUpdateEntry(selectedEntry.id, values)} onDelete={() => onDeleteEntry(selectedEntry.id)} onClose={() => setSelectedEntry(null)} />}
     {linkEntry && <LinkEntrySheet entry={linkEntry} matches={matches} groups={groups} allEntries={allEntries} onLink={onLinkEntry} onSuccess={() => onNotify('Stats vinculadas correctamente.')} onEditExisting={entry => setSelectedEntry(entry)} onClose={() => setLinkEntry(null)} />}
     {settingsOpen && <SettingsSheet user={user} theme={theme} onTheme={onTheme} onSaveUser={onSaveUser} onStartTour={onStartTour} onOpenGuide={() => setGuideOpen(true)} canInstall={pwaCanInstall} installed={pwaInstalled} onInstall={onInstallPwa} onClose={() => setSettingsOpen(false)} />}

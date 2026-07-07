@@ -53,6 +53,11 @@ export function useAuth() {
     return {}
   }, [user])
 
+  const updatePassword = useCallback(async (password: string): Promise<AuthResult> => {
+    if (!user) return { error: 'No hay una sesiÃ³n activa.' }
+    return authRepository.updatePassword(password)
+  }, [user])
+
   const signOut = useCallback(async (): Promise<AuthResult> => {
     const result = await authRepository.signOut()
     if (!result.error) {
@@ -88,5 +93,6 @@ export function useAuth() {
     signOut,
     refreshProfile,
     updateProfile,
+    updatePassword,
   }
 }

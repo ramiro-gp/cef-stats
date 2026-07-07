@@ -148,4 +148,10 @@ export const authRepository = {
     if (response.error) return { error: authErrorMessage(response.error) }
     return { profile: toProfile(response.data) }
   },
+  async updatePassword(password: string): Promise<AuthResult> {
+    const { client, error } = requireClient()
+    if (!client) return { error: error! }
+    const response = await client.auth.updateUser({ password })
+    return response.error ? { error: authErrorMessage(response.error) } : {}
+  },
 }

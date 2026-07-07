@@ -11,7 +11,7 @@ function Counter({ label, value, onChange }: { label: string; value: number; onC
   return <div className="flex items-center justify-between rounded-2xl border border-slate-200 p-4 dark:border-white/10"><span className="font-bold">{label}</span><div className="flex items-center gap-3"><button onClick={() => onChange(Math.max(0, value - 1))} disabled={value === 0} className="grid h-12 w-12 place-items-center rounded-xl border border-slate-200 text-2xl disabled:opacity-30 dark:border-white/10">−</button><span className="w-8 text-center text-2xl font-black">{value}</span><button onClick={() => onChange(value + 1)} className="grid h-12 w-12 place-items-center rounded-xl bg-emerald-500 text-2xl font-black text-ink">+</button></div></div>
 }
 
-export function MatchStatsSheet({ match, userId, existing, onSave, onClose }: { match: Match; userId: string; existing?: StatEntry; onSave: (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'team'>) => void | Promise<void>; onClose: () => void }) {
+export function MatchStatsSheet({ match, userId, existing, onSave, onClose }: { match: Match; userId: string; existing?: StatEntry; onSave: (values: Pick<StatEntry, 'result' | 'goals' | 'assists' | 'team' | 'matchType' | 'footballFormat'>) => void | Promise<void>; onClose: () => void }) {
   const team = match.participants.find(participant => participant.userId === userId)?.team
   const automaticResult = getMatchResultForTeam(match.score, team)
   const [result, setResult] = useState<MatchResult | null>(automaticResult ?? existing?.result ?? null)
@@ -25,7 +25,7 @@ export function MatchStatsSheet({ match, userId, existing, onSave, onClose }: { 
     setSaving(true)
     setError('')
     try {
-      await onSave({ result: finalResult, goals, assists, team })
+      await onSave({ result: finalResult, goals, assists, team, matchType: match.matchType ?? 'friendly', footballFormat: match.format ?? 'F5' })
       onClose()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'No pudimos guardar las stats.')
