@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { CheckIcon, FireIcon } from '../components/icons'
 import { PageTitle } from '../components/PageTitle'
 import { MatchCodePickerSheet, type MatchLinkSelection } from '../components/MatchCodePickerSheet'
-import type { Group, Match, MatchResult, Page, PlayerPosition, StatEntry, StatFootballFormat, StatMatchType, User } from '../types'
+import type { Group, Match, MatchResult, MatchTeam, Page, PlayerPosition, StatEntry, StatFootballFormat, StatMatchType, User } from '../types'
 import type { AddStatEntry } from '../store/useLocalStore'
-import { getMatchResultForTeam } from '../utils/matches'
+import { getMatchResultForTeam, isTeamFull } from '../utils/matches'
 
 const resultOptions: { value: MatchResult; label: string; emoji: string }[] = [
   { value: 'win', label: 'Gané', emoji: '🙌' },
@@ -33,19 +33,20 @@ interface Props {
   groups: Group[]
   entries: StatEntry[]
   user: User
-  onAttendMatch?: (matchId: string) => Match | void | Promise<Match | void>
   onOmitMatch?: (matchId: string) => Match | void | Promise<Match | void>
+  onJoinMatchTeam?: (matchId: string, team: MatchTeam) => Match | void | Promise<Match | void>
   defaultContextId?: string
   personalContextId?: string
 }
 
-export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, entries, user, onAttendMatch, onOmitMatch, defaultContextId = '', personalContextId = '' }: Props) {
+export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, entries, user, onOmitMatch, onJoinMatchTeam, defaultContextId = '', personalContextId = '' }: Props) {
   const defaultContextGroup = groups.find(group => group.id === defaultContextId)
   const initialMatchType = defaultContextGroup?.defaultMatchType ?? (user.defaultMatchType === 'ask' ? 'friendly' : user.defaultMatchType)
   const initialFormat = defaultContextGroup?.defaultFootballFormat ?? (user.defaultFootballFormat === 'ask' ? 'F5' : user.defaultFootballFormat)
   const [result, setResult] = useState<MatchResult | null>(null)
   const [goals, setGoals] = useState(0)
   const [assists, setAssists] = useState(0)
+  const [now] = useState(() => Date.now())
   const [saved, setSaved] = useState(false)
   const [linking, setLinking] = useState(false)
   const [linked, setLinked] = useState<MatchLinkSelection | null>(null)
@@ -63,7 +64,9 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
   const pendingMatches = matches
     .filter(match => {
       const matchesContext = contextId === personalContextId ? !match.groupId : Boolean(contextId) && match.groupId === contextId
-      return matchesContext && !match.omittedByCurrentUser && !entries.some(entry => entry.userId === user.id && entry.matchId === match.id)
+      const scheduledAt = new Date(match.scheduledAt).getTime()
+      const recentEnough = scheduledAt >= now - 7 * 24 * 60 * 60 * 1000
+      return matchesContext && recentEnough && !match.omittedByCurrentUser && !entries.some(entry => entry.userId === user.id && entry.matchId === match.id)
     })
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
   const selectMatchShortcut = (match: Match) => {
@@ -77,16 +80,23 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
     if (matchGroup?.defaultMatchType) setMatchType(matchGroup.defaultMatchType)
     if (formatOptions.includes(match.format as StatFootballFormat)) setFootballFormat(match.format as StatFootballFormat)
   }
-  const attendShortcut = async (match: Match) => {
-    if (!onAttendMatch || pendingMatchAction) return
-    setPendingMatchAction(`attend-${match.id}`)
+  const joinTeamShortcut = async (match: Match, team: MatchTeam) => {
+    if (!onJoinMatchTeam || pendingMatchAction) return
+    const teamName = team === 'light' ? match.lightTeamName : match.darkTeamName
+    if (isTeamFull(match, team, user.id)) {
+      const message = `${teamName} está completo.`
+      setError(message)
+      onNotify(message, 'error')
+      return
+    }
+    setPendingMatchAction(`team-${match.id}-${team}`)
     setError('')
     try {
-      const updated = await onAttendMatch(match.id)
-      selectMatchShortcut(updated ?? match)
-      onNotify(`Te anotaste en ${match.title}.`)
+      const updated = await onJoinMatchTeam(match.id, team)
+      selectMatchShortcut(updated ?? { ...match, participants: [...match.participants.filter(participant => participant.userId !== user.id), { id: `pending-${user.id}`, matchId: match.id, userId: user.id, type: 'registered_user', team, createdAt: new Date().toISOString() }] })
+      onNotify(`Ya estás en ${teamName}.`)
     } catch (reason) {
-      const message = reason instanceof Error ? reason.message : 'No pudimos anotarte en el partido.'
+      const message = reason instanceof Error ? reason.message : 'No pudimos elegir equipo.'
       setError(message)
       onNotify(message, 'error')
     } finally {
@@ -148,7 +158,8 @@ export function AddStatsPage({ onSave, onNavigate, onNotify, matches, groups, en
             <button type="button" onClick={() => selectMatchShortcut(match)} className="w-full text-left">
               <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate text-sm font-black">{match.title}</p><p className="mt-1 text-xs text-slate-400">{new Date(match.scheduledAt).toLocaleString('es-AR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {match.groupId ? match.groupName ?? groups.find(group => group.id === match.groupId)?.name ?? 'Grupo' : 'Sin grupo'}</p></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{teamName}</span></div>
             </button>
-            {undecided && onAttendMatch && onOmitMatch && <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => void attendShortcut(match)} disabled={Boolean(pendingMatchAction)} className="min-h-10 rounded-xl bg-emerald-500 text-xs font-black text-ink disabled:opacity-50">{pendingMatchAction === `attend-${match.id}` ? 'ANOTANDO...' : 'UNIRME'}</button><button type="button" onClick={() => void omitShortcut(match)} disabled={Boolean(pendingMatchAction)} className="min-h-10 rounded-xl border border-slate-200 text-xs font-black text-slate-500 disabled:opacity-50 dark:border-white/10">{pendingMatchAction === `omit-${match.id}` ? 'OMITIENDO...' : 'OMITIR'}</button></div>}
+            {!participant?.team && onJoinMatchTeam && <div className="mt-3 grid grid-cols-2 gap-2">{(['light', 'dark'] as MatchTeam[]).map(team => { const full = isTeamFull(match, team, user.id); const label = team === 'light' ? match.lightTeamName : match.darkTeamName; return <button key={team} type="button" onClick={() => void joinTeamShortcut(match, team)} disabled={Boolean(pendingMatchAction) || full} className="min-h-10 truncate rounded-xl bg-emerald-500 px-2 text-xs font-black text-ink disabled:cursor-not-allowed disabled:opacity-50">{pendingMatchAction === `team-${match.id}-${team}` ? 'GUARDANDO...' : full ? 'COMPLETO' : `${undecided ? 'UNIRME ' : ''}${label}`}</button> })}</div>}
+            {undecided && onOmitMatch && <button type="button" onClick={() => void omitShortcut(match)} disabled={Boolean(pendingMatchAction)} className="mt-2 min-h-10 w-full rounded-xl border border-slate-200 text-xs font-black text-slate-500 disabled:opacity-50 dark:border-white/10">{pendingMatchAction === `omit-${match.id}` ? 'OMITIENDO...' : 'OMITIR'}</button>}
           </article>
         })}</div>
       </section>}
