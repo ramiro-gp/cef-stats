@@ -261,7 +261,7 @@ export default function App() {
     ? [...new Map([...scopeEntries, ...globalEntries.filter(entry => entry.scopeType === 'personal' || !entry.groupId)].map(entry => [entry.id, entry])).values()]
     : scopeEntries
   const activeUserEntries = allScope ? globalEntries : groupEntries
-  const homeEntries = allScope ? [...new Map([...scopeEntries, ...globalEntries.filter(entry => entry.scopeType === 'personal')].map(entry => [entry.id, entry])).values()] : groupEntries
+  const homeEntries = allScope ? [...new Map([...scopeEntries, ...globalEntries.filter(entry => entry.scopeType === 'personal')].map(entry => [entry.id, entry])).values()] : personalScope ? groupEntries : scopeEntries
   const allMatches = accountMode ? remoteMatches.matches : store.matches.filter(match => match.groupId === group.id)
   const groupMatches = accountMode ? allScope ? allMatches : personalScope ? allMatches.filter(match => !match.groupId) : allMatches.filter(match => match.groupId === group.id) : allMatches
   const groupMatchEvents = accountMode ? [] : store.matchEvents.filter(event => event.groupId === group.id)

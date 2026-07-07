@@ -9,6 +9,7 @@ function activity(values: Omit<ActivityFeedItem, 'groupId'>, groupId: string): A
 }
 
 function matchEventActivity(event: MatchEvent, matches: Match[], user: User): ActivityFeedItem | null {
+  if (['joined_team', 'left_match', 'guest_added', 'guest_removed'].includes(event.type)) return null
   const match = matches.find(item => item.id === event.matchId)
   if (!match) return null
   const playerName = event.guestName ?? (event.userId === user.id ? user.name : 'Un jugador')

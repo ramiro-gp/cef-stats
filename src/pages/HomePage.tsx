@@ -27,7 +27,7 @@ interface Props {
 export function HomePage({ user, group, entries, matches, matchEvents, totals, rankings, worldCup, onNavigate, onOpenMatch, userNames = {}, groupNames = {}, playerGroupIds = {} }: Props) {
   const personalScope = isPersonalScope(group)
   const allScope = isAllScope(group)
-  const feed = allScope ? buildAllGroupsActivityFeed(entries, userNames, groupNames, matches) : buildActivityFeed(entries, user, group, matches, matchEvents)
+  const feed = allScope || (!personalScope && entries.some(entry => entry.userId !== user.id)) ? buildAllGroupsActivityFeed(entries, userNames, groupNames, matches) : buildActivityFeed(entries, user, group, matches, matchEvents)
   const recentFeed = feed.slice(0, 10)
   const hasRankings = rankings.length > 0
   const goalPosition = getGoalPosition(rankings, user.id)
@@ -61,7 +61,7 @@ export function HomePage({ user, group, entries, matches, matchEvents, totals, r
     {featuredMatch && <section className="mt-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/[0.08] p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-widest text-emerald-500">Partido del grupo</p>
+          <p className="text-xs font-black uppercase tracking-widest text-emerald-500">Partidos disponibles de {group.name}</p>
           <h2 className="mt-1 text-lg font-extrabold">{featuredMatch.title}</h2>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-300">{new Date(featuredMatch.scheduledAt).toLocaleString('es-AR', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })} · {featuredMatch.participants.length} jugador{featuredMatch.participants.length === 1 ? '' : 'es'} anotado{featuredMatch.participants.length === 1 ? '' : 's'}</p>
         </div>
