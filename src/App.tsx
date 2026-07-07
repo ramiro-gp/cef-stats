@@ -217,7 +217,7 @@ export default function App() {
 
   if (auth.status === 'unauthenticated') {
     if (location.pathname !== '/login') return <Navigate to={{ pathname: '/login', search: location.search }} replace state={{ from: `${location.pathname}${location.search}` }} />
-    return <LoginPage configured={auth.configured} loading={auth.loading} authError={auth.error} pendingGroupCode={pendingGroupCode} pendingMatchCode={pendingMatchCode} onSignIn={auth.signIn} onSignUp={auth.signUp} />
+    return <LoginPage configured={auth.configured} loading={auth.loading} authError={auth.error} pendingGroupCode={pendingGroupCode} pendingMatchCode={pendingMatchCode} onSignIn={auth.signIn} onSignUp={auth.signUp} onResetPassword={auth.resetPassword} />
   }
 
   if (location.pathname === '/login') {

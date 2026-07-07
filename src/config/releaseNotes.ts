@@ -10,8 +10,8 @@ export const currentReleaseNotes: ReleaseNotes = {
   version: packageInfo.version,
   title: 'Últimos cambios',
   notes: [
-    'Mejoramos la pantalla de entrada.',
-    'Sumamos métricas en movimiento y contador de jugadores.',
-    'Limpiamos textos raros del login.',
+    'Agregamos recuperar contraseña.',
+    'Sumamos mantener sesión abierta.',
+    'Pulimos el carrusel y el contador del login.',
   ],
 }

@@ -28,6 +28,19 @@ export function useAuth() {
   useEffect(() => {
     if (!authRepository.configured) return
     let active = true
+    const hash = typeof window === 'undefined' ? '' : window.location.hash
+    const isAuthCallback = hash.includes('access_token') || hash.includes('type=recovery')
+
+    if (!authRepository.shouldRememberSession() && !isAuthCallback) {
+      void authRepository.signOut().finally(() => {
+        if (!active) return
+        setUser(null)
+        setProfile(null)
+        setLoading(false)
+      })
+      return () => { active = false }
+    }
+
     void authRepository.getSession().then(session => { if (active) void syncSession(session) }).catch(reason => {
       if (!active) return
       setError(authErrorMessage(reason))
@@ -69,17 +82,21 @@ export function useAuth() {
     return result
   }, [])
 
-  const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
+  const signIn = useCallback(async (email: string, password: string, rememberSession = true): Promise<AuthResult> => {
+    authRepository.setRememberSession(rememberSession)
     const result = await authRepository.signIn(email, password)
     if (result.session) await syncSession(result.session)
     return result
   }, [syncSession])
 
-  const signUp = useCallback(async (values: SignUpValues): Promise<AuthResult> => {
+  const signUp = useCallback(async (values: SignUpValues, rememberSession = true): Promise<AuthResult> => {
+    authRepository.setRememberSession(rememberSession)
     const result = await authRepository.signUp(values)
     if (result.session) await syncSession(result.session)
     return result
   }, [syncSession])
+
+  const resetPassword = useCallback((email: string): Promise<AuthResult> => authRepository.resetPassword(email), [])
 
   return {
     configured: authRepository.configured,
@@ -94,5 +111,6 @@ export function useAuth() {
     refreshProfile,
     updateProfile,
     updatePassword,
+    resetPassword,
   }
 }

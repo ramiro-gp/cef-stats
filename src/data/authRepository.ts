@@ -1,6 +1,7 @@
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js'
 import { isSupabaseConfigured, supabase, SUPABASE_NOT_CONFIGURED_MESSAGE } from '../lib/supabaseClient'
 import type { AuthProfile, LoadFormatPreference, LoadMatchTypePreference, PlayerPosition } from '../types'
+import { createStringStorageAdapter } from './localStorageAdapter'
 import { normalizeHandle } from '../utils/identity'
 
 interface ProfileRow {
@@ -29,6 +30,7 @@ export interface SignUpValues {
 }
 
 const profileColumns = 'id,name,handle,avatar,position,default_match_type,default_football_format,created_at,updated_at'
+const rememberSessionStorage = createStringStorageAdapter('fulbo-stats-remember-session')
 
 function toProfile(row: ProfileRow): AuthProfile {
   return { id: row.id, name: row.name, handle: row.handle, avatar: row.avatar, position: row.position, defaultMatchType: row.default_match_type ?? 'friendly', defaultFootballFormat: row.default_football_format ?? 'F5', createdAt: row.created_at, updatedAt: row.updated_at }
@@ -114,6 +116,12 @@ export const authRepository = {
       return { error: authErrorMessage(reason) }
     }
   },
+  shouldRememberSession(): boolean {
+    return rememberSessionStorage.load() !== 'false'
+  },
+  setRememberSession(remember: boolean): void {
+    rememberSessionStorage.save(remember ? 'true' : 'false')
+  },
   async signUp(values: SignUpValues): Promise<AuthResult> {
     const { client, error } = requireClient()
     if (!client) return { error: error! }
@@ -153,6 +161,13 @@ export const authRepository = {
     if (!client) return { error: error! }
     const response = await client.auth.updateUser({ password })
     return response.error ? { error: authErrorMessage(response.error) } : {}
+  },
+  async resetPassword(email: string): Promise<AuthResult> {
+    const { client, error } = requireClient()
+    if (!client) return { error: error! }
+    const redirectTo = typeof window === 'undefined' ? undefined : `${window.location.origin}/login`
+    const response = await client.auth.resetPasswordForEmail(email.trim(), redirectTo ? { redirectTo } : undefined)
+    return response.error ? { error: authErrorMessage(response.error) } : { message: 'Te mandamos un email para cambiar la contraseña. Revisá tu casilla y spam.' }
   },
   async getPublicUserCount(): Promise<number | null> {
     const { client } = requireClient()
