@@ -54,7 +54,7 @@ export function useAuth() {
   }, [user])
 
   const updatePassword = useCallback(async (password: string): Promise<AuthResult> => {
-    if (!user) return { error: 'No hay una sesiÃ³n activa.' }
+    if (!user) return { error: 'No hay una sesión activa.' }
     return authRepository.updatePassword(password)
   }, [user])
 

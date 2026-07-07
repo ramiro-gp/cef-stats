@@ -94,7 +94,7 @@ function statError(message: string): string {
   if ((normalized.includes('match_type') || normalized.includes('football_format') || normalized.includes('played_position')) && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/009_add_stat_entry_context.sql.'
   if (normalized.includes('stat_entries_football_format_check')) return 'Falta ejecutar supabase/patches/010_expand_stat_football_formats.sql.'
   if (normalized.includes('stat_entries') && (normalized.includes('does not exist') || normalized.includes('schema cache'))) return 'Falta ejecutar supabase/patches/002_add_stat_entries.sql.'
-  if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para guardar stats en este scope. Revisá tu membresía o participación en el partido.'
+  if (normalized.includes('permission') || normalized.includes('policy') || normalized.includes('row-level security')) return 'No tenés permisos para guardar stats en esta vista. Revisá tu membresía o participación en el partido.'
   if (normalized.includes('authentication') || normalized.includes('jwt')) return 'Tu sesión venció. Volvé a iniciar sesión.'
   return message
 }

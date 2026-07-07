@@ -11,9 +11,9 @@ function currentWorldCupPhrase(user: User, state: PersonalWorldCupState): string
   return `${user.name} suma ${state.groupPoints} ${state.groupPoints === 1 ? 'punto' : 'puntos'} en ${state.groupMatchesPlayed}/3 partidos${ending}.`
 }
 
-function mockWorldCupPhrase(player: RankingPlayer): string {
+function mockWorldCupPhrase(player: RankingPlayer): string | null {
   if (player.worldCupsWon > 0) return `${player.name} ganó ${player.worldCupsWon} Mundial${player.worldCupsWon === 1 ? '' : 'es'} Personal${player.worldCupsWon === 1 ? '' : 'es'}.`
-  if (player.worldCupStage === 'group' || player.worldCupStage === 'roundOf16') return `${player.name} suma partidos en su Mundial Personal.`
+  if (player.worldCupStage === 'group' || player.worldCupStage === 'roundOf16') return null
   if (player.worldCupStage === 'quarterFinal') return `${player.name} está buscando su pase a semis.`
   return `${player.name} está en ${worldCupStageLabels[player.worldCupStage].toLowerCase()} de su Mundial Personal.`
 }
@@ -55,7 +55,10 @@ export function buildGroupBannerMessages(group: Group, players: RankingPlayer[],
   const candidates: BannerMessage[] = [
     { subject: user.id, type: 'world_cup', text: currentWorldCupPhrase(user, worldCup) },
     { subject: goalRanking[0].id, type: 'ranking', text: `${goalRanking[0].name} lidera la tabla con ${goalRanking[0].goals} goles.` },
-    ...rotatedMocks.slice(0, 2).map(player => ({ subject: player.id, type: 'world_cup' as const, text: mockWorldCupPhrase(player) })),
+    ...rotatedMocks.slice(0, 2).flatMap(player => {
+      const text = mockWorldCupPhrase(player)
+      return text ? [{ subject: player.id, type: 'world_cup' as const, text }] : []
+    }),
     { subject: assistRanking[0].id, type: 'stats', text: `${assistRanking[0].name} manda en asistencias con ${assistRanking[0].assists}.` },
   ]
 

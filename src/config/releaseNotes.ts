@@ -10,8 +10,8 @@ export const currentReleaseNotes: ReleaseNotes = {
   version: packageInfo.version,
   title: 'Últimos cambios',
   notes: [
-    'Home muestra varios partidos disponibles del grupo.',
-    'Podés unirte u omitir partidos desde Inicio.',
-    'Limpiamos frases flojas del banner rotativo.',
+    'Inicio ahora habla de Últimas novedades.',
+    'El banner evita mensajes repetidos de Mundial en fases tempranas.',
+    'Corregimos textos e íconos rotos en Partidos.',
   ],
 }
